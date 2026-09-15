@@ -19,6 +19,7 @@ API (kept compatible with the error-discovery skill so the same UI works):
     POST /api/samples         push a new or updated sample set
     GET  /api/annotations     current human annotations
     POST /api/annotations     save annotations (the app posts on every change)
+    GET/POST /api/refresh     rebuild samples from Langfuse + scenario files
     GET  /api/graph           the 2D projection of all traces for the map view
     GET  /api/patterns        the taxonomy as the agent currently holds it
     POST /api/patterns        push the updated taxonomy
@@ -42,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -49,6 +51,10 @@ from pathlib import Path
 from typing import Any
 
 HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 STATE_DIR = HERE / "state"
 UI_DIR = HERE / "ui"
 
@@ -84,7 +90,7 @@ def _read_json(path: Path, default: Any) -> Any:
     if not path.exists():
         return default
     try:
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return default
 
@@ -93,7 +99,7 @@ def _write_json(path: Path, data: Any) -> None:
     """Write ``data`` to ``path`` atomically (write temp, then replace)."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, indent=2))
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     tmp.replace(path)
 
 
@@ -160,6 +166,10 @@ class ReviewHandler(BaseHTTPRequestHandler):
                 self._send_file(asset, _guess_type(asset))
                 return
 
+        if path == "/api/refresh":
+            self._refresh_samples()
+            return
+
         if path in API_FILES:
             data = _read_json(API_FILES[path], API_DEFAULTS[path])
             self._send_json(data)
@@ -167,8 +177,23 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
         self._send_json({"error": f"unknown path: {path}"}, status=404)
 
+    def _refresh_samples(self) -> None:
+        """Pull traces from Langfuse and rebuild the review sample set."""
+        try:
+            from analysis.review_records import refresh_review_samples
+
+            samples = refresh_review_samples()
+        except Exception as exc:  # pragma: no cover - live Langfuse path
+            self._send_json({"error": str(exc)}, status=502)
+            return
+        print(f"refreshed {len(samples)} review records from Langfuse")
+        self._send_json({"ok": True, "count": len(samples)})
+
     def do_POST(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
+        if path == "/api/refresh":
+            self._refresh_samples()
+            return
         if path not in API_FILES:
             self._send_json({"error": f"cannot POST to {path}"}, status=404)
             return
@@ -333,9 +358,27 @@ def main() -> None:
         default=4.0,
         help="seconds between replayed annotations (default 4)",
     )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="pull traces from Langfuse and rebuild samples.json before serving",
+    )
     args = parser.parse_args()
 
     STATE_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        from observability.instrument import load_env
+
+        load_env()
+    except Exception:
+        pass
+
+    if args.refresh:
+        from analysis.review_records import refresh_review_samples
+
+        samples = refresh_review_samples()
+        print(f"loaded {len(samples)} traces from Langfuse")
 
     if args.replay:
         replay_path = Path(args.replay)
@@ -352,7 +395,7 @@ def main() -> None:
     url = f"http://{args.host}:{args.port}/"
     print(f"review interface on {url}")
     print(f"serving state from {STATE_DIR}")
-    print("open the URL, read a trace, select the failing text, type a note.")
+    print("open the URL, read a trace, compare it to the expected outcome, type a note.")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
