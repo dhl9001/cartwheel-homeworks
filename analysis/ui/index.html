@@ -1,147 +1,135 @@
 <!DOCTYPE html>
 <!--
-  Error-analysis review interface (reference UI for the Cartwheel course).
+  Cartwheel pilot-trace review UI.
 
-  Adapted from the instructor's error-discovery skill. A single self-contained
-  file, served by analysis/server.py, that renders Cartwheel agent traces for
-  reading and annotation. Three views:
+  Adapted from the course reference reviewer for the observed Langfuse shape:
+  per-turn traces, nested OpenAI "parts" envelopes, and duplicate generation
+  spans. This page shows one scenario at a time: the reconstructed
+  conversation (user / tool call+result / assistant), the expected outcome
+  from the scenario file, and a free-text annotation field.
 
-    trace     read one trace, annotate the first failure in place
-    map       a 2D projection of the whole store, clusters + sampled + annotated
-    progress  the failure-mode treemap and the agent-suggestion queue
-
-  Talks to the file-backed API in server.py:
-    GET/POST /api/samples  /api/annotations  /api/patterns  /api/suggestions
-    GET      /api/graph
-
-  Visual encoding (SKILL.md phase 2): color hue = message role, opacity =
-  read-this-carefully (boilerplate recedes), spacing = step hierarchy,
-  monospace = tool arguments and structured results, container = a tool call
-  grouped with its result. No CDN dependencies: the whole thing is inline so it
-  works offline and can be committed as one artifact.
-
-  This reference UI targets the Cartwheel trace shape. For a store with a
-  different shape, adapt renderTrace() to the new roles and content types and
-  leave the server API unchanged.
+  Visual encoding: hue = message role; container = tool call with its result;
+  monospace = arguments and structured results; expected outcome lives in a
+  separate panel so it does not reuse a role color.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Cartwheel error analysis</title>
+<title>Cartwheel trace review</title>
 <style>
   :root {
-    /* role hues (Gestalt similarity: one hue per role, full saturation) */
     --role-user: #2563eb;
     --role-assistant: #059669;
     --role-tool-call: #b45309;
     --role-tool-result: #7c3aed;
-    --role-system: #6b7280;
     --role-retrieval: #0891b2;
-
-    --bg: #f7f7f8;
+    --bg: #f4f5f7;
     --panel: #ffffff;
-    --ink: #1a1a1a;
+    --ink: #171717;
     --muted: #6b7280;
     --line: #e5e7eb;
-    --hl: #fde68a;             /* human annotation highlight */
-    --hl-pending: #fef08a;     /* mid-annotation, before save */
-    --sugg: #ddd6fe;           /* agent suggestion highlight tint */
-    --sugg-border: #7c3aed;
+    --expected: #fff7ed;
+    --expected-edge: #c2410c;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; min-width: 1100px; }
   body {
     margin: 0;
-    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     color: var(--ink);
     background: var(--bg);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   code, pre, .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
 
-  /* ---- top bar ---- */
   header {
-    display: flex; align-items: center; gap: 16px;
-    padding: 10px 18px; background: var(--panel);
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px; background: var(--panel);
     border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; z-index: 50;
+    position: sticky; top: 0; z-index: 40;
   }
-  header h1 { font-size: 15px; margin: 0; font-weight: 700; }
-  header h1 .dim { color: var(--muted); font-weight: 400; }
-  .views { display: flex; gap: 4px; }
-  .views button {
-    border: 1px solid var(--line); background: var(--bg);
-    padding: 6px 14px; border-radius: 6px; cursor: pointer; font: inherit;
-  }
-  .views button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  header h1 { font-size: 15px; margin: 0; }
+  header h1 span { color: var(--muted); font-weight: 400; }
   .spacer { flex: 1; }
-  .counts { color: var(--muted); font-size: 13px; }
-  .nav { display: flex; gap: 4px; align-items: center; }
-  .nav button {
+  .counts, .save-state { color: var(--muted); font-size: 13px; }
+  .save-state.ok { color: var(--role-assistant); }
+  .save-state.err { color: #dc2626; }
+  header button, .nav button {
     border: 1px solid var(--line); background: var(--bg);
-    width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font: inherit;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit;
   }
-  .nav .pos { color: var(--muted); font-size: 13px; min-width: 74px; text-align: center; }
+  .nav { display: flex; gap: 4px; align-items: center; }
+  .nav .pos { min-width: 72px; text-align: center; font-size: 13px; color: var(--muted); }
 
-  /* ---- toast banner for new samples/suggestions ---- */
-  #toast {
-    position: fixed; right: 18px; bottom: 18px; z-index: 100;
-    background: var(--ink); color: #fff; padding: 10px 16px;
-    border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none;
-    transition: opacity .2s; max-width: 320px;
+  .app {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr) 320px;
+    grid-template-areas: "rail main side";
+    height: calc(100% - 53px);
   }
-  #toast.show { opacity: 1; }
+  .rail {
+    grid-area: rail;
+    padding: 12px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow: auto;
+  }
+  .main { grid-area: main; overflow: auto; padding: 20px 24px 80px; }
+  .side {
+    grid-area: side; background: var(--panel);
+    border-left: 1px solid var(--line); padding: 16px; overflow: auto;
+  }
+  .rail input {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 6px; font: inherit; margin-bottom: 8px;
+  }
+  .scenario {
+    width: 100%; text-align: left; border: 0; background: transparent;
+    padding: 8px 8px; border-radius: 6px; cursor: pointer; font: inherit;
+    display: grid; gap: 2px;
+  }
+  .scenario:hover { background: var(--bg); }
+  .scenario.active { background: #111; color: #fff; }
+  .scenario.active .meta { color: #d1d5db; }
+  .scenario .id { font-weight: 650; font-size: 13px; }
+  .scenario .meta { color: var(--muted); font-size: 12px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+    background: var(--line); margin-right: 6px;
+  }
+  .dot.filled { background: var(--role-assistant); }
 
-  .view { display: none; }
-  .view.active { display: block; }
+  .trace-header { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+  .tid { font-weight: 700; margin-right: 8px; }
+  .chip {
+    display: inline-block; font-size: 12px; color: var(--muted);
+    background: #eef0f3; padding: 2px 8px; border-radius: 999px; margin: 0 4px 4px 0;
+  }
+  .flag { background: #fef3c7; color: #92400e; }
+  .langfuse { font-size: 12px; color: var(--role-user); }
 
-  /* ---- trace view: two columns, body + margin ---- */
-  #trace-view { padding: 20px 18px 120px; }
-  .trace-header {
-    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline;
-    max-width: 980px; margin: 0 auto 14px; padding-bottom: 12px;
-    border-bottom: 1px solid var(--line);
-  }
-  .trace-header .tid { font-weight: 700; }
-  .trace-header .meta { color: var(--muted); font-size: 13px; }
-  .trace-header .flag {
-    font-size: 11px; background: #fef3c7; color: #92400e;
-    padding: 2px 7px; border-radius: 10px;
-  }
-  .trace-body-wrap {
-    display: flex; gap: 24px; max-width: 980px; margin: 0 auto;
-    align-items: flex-start; position: relative;
-  }
-  .trace-body { flex: 1; max-width: 720px; }
-  .margin-col { width: 240px; position: relative; flex-shrink: 0; }
-
-  /* a step groups a tool call + its result (Gestalt common region) */
   .step {
-    border: 1px solid var(--line); border-radius: 8px;
-    margin-bottom: 20px; overflow: hidden; background: var(--panel);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    margin-bottom: 18px; overflow: hidden;
   }
-  .step.tight { margin-bottom: 8px; }         /* tight within a logical group */
-
+  .step.retrieval { border-color: #a5f3fc; }
   .msg { padding: 10px 14px; border-left: 4px solid var(--line); }
   .msg + .msg { border-top: 1px solid var(--line); }
   .msg .role {
     font-size: 11px; font-weight: 700; text-transform: uppercase;
     letter-spacing: .04em; margin-bottom: 5px;
   }
-  .msg[data-role="user"]        { border-left-color: var(--role-user); }
-  .msg[data-role="user"] .role        { color: var(--role-user); }
-  .msg[data-role="assistant"]   { border-left-color: var(--role-assistant); }
-  .msg[data-role="assistant"] .role   { color: var(--role-assistant); }
-  .msg[data-role="tool_call"]   { border-left-color: var(--role-tool-call); }
-  .msg[data-role="tool_call"] .role   { color: var(--role-tool-call); }
+  .msg[data-role="user"] { border-left-color: var(--role-user); }
+  .msg[data-role="user"] .role { color: var(--role-user); }
+  .msg[data-role="assistant"] { border-left-color: var(--role-assistant); }
+  .msg[data-role="assistant"] .role { color: var(--role-assistant); }
+  .msg[data-role="tool_call"] { border-left-color: var(--role-tool-call); }
+  .msg[data-role="tool_call"] .role { color: var(--role-tool-call); }
   .msg[data-role="tool_result"] { border-left-color: var(--role-tool-result); }
   .msg[data-role="tool_result"] .role { color: var(--role-tool-result); }
-  .msg[data-role="system"]      { border-left-color: var(--role-system); opacity: .55; }
-  .msg[data-role="system"] .role      { color: var(--role-system); }
-  .msg[data-role="retrieval"]   { border-left-color: var(--role-retrieval); }
-  .msg[data-role="retrieval"] .role   { color: var(--role-retrieval); }
-  .msg.boiler { opacity: .5; }                /* identical-across-traces content */
-
-  .msg .text { white-space: pre-wrap; word-wrap: break-word; }
+  .msg[data-role="tool_result"].retrieval { border-left-color: var(--role-retrieval); }
+  .msg[data-role="tool_result"].retrieval .role { color: var(--role-retrieval); }
+  .text { white-space: pre-wrap; word-break: break-word; }
   .fn { font-weight: 700; }
   details.args { margin-top: 6px; }
   details.args summary { cursor: pointer; color: var(--muted); font-size: 13px; }
@@ -149,728 +137,442 @@
     background: #f3f4f6; border-radius: 6px; padding: 8px 10px; margin: 6px 0 0;
     font-size: 12.5px; overflow-x: auto; white-space: pre;
   }
-  .result-summary { color: var(--muted); font-size: 13px; }
+  .turn-break {
+    color: var(--muted); font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+    margin: 28px 0 12px; padding-top: 8px;
+    border-top: 2px dashed var(--line);
+  }
+  .empty { color: var(--muted); padding: 24px 0; }
 
-  /* ---- highlights + margin notes ---- */
-  .hl { background: var(--hl); border-radius: 2px; cursor: pointer; }
-  .hl.pending-highlight { background: var(--hl-pending); }
-  .hl.sugg { background: var(--sugg); border-bottom: 2px dashed var(--sugg-border); }
-  .hl.outline { outline: 2px solid var(--ink); outline-offset: 1px; }
-
-  .mnote {
-    position: absolute; left: 0; width: 100%;
-    background: var(--panel); border-left: 3px solid var(--hl);
-    border-radius: 4px; padding: 7px 9px; font-size: 12.5px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  .panel-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--muted); margin: 0 0 8px;
   }
-  .mnote.sugg { border-left-color: var(--sugg-border); background: #faf5ff; }
-  .mnote.outline { box-shadow: 0 0 0 2px var(--ink); }
-  .mnote .quote { color: var(--muted); font-style: italic; margin-bottom: 3px; }
-  .mnote .body { white-space: pre-wrap; }
-  .mnote .tag {
-    display: inline-block; font-size: 10px; font-weight: 700;
-    color: var(--sugg-border); text-transform: uppercase; margin-bottom: 3px;
+  .expected {
+    background: var(--expected); border-left: 4px solid var(--expected-edge);
+    border-radius: 8px; padding: 12px; margin-bottom: 18px;
   }
-  .mnote .acts { margin-top: 5px; display: flex; gap: 6px; }
-  .mnote .acts button {
-    border: 1px solid var(--line); background: var(--bg); font: inherit;
-    font-size: 11px; padding: 2px 8px; border-radius: 5px; cursor: pointer;
+  .expected h2 { margin: 0 0 6px; font-size: 15px; }
+  .expected .reason, .expected .source { font-size: 13px; color: #7c2d12; margin-top: 8px; }
+  textarea {
+    width: 100%; min-height: 180px; resize: vertical;
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px; font: inherit; line-height: 1.45;
   }
-  .mnote .acts .accept { border-color: var(--role-assistant); color: var(--role-assistant); }
-  .mnote .acts .reject { border-color: #dc2626; color: #dc2626; }
-  .mnote.human .acts { visibility: hidden; }
-  .mnote.human:hover .acts { visibility: visible; }
-
-  /* ---- annotation popover ---- */
-  #popover {
-    position: absolute; z-index: 200; display: none;
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.16); padding: 8px;
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  #toast {
+    position: fixed; right: 16px; bottom: 16px; z-index: 80;
+    background: #111; color: #fff; padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s;
   }
-  #popover input {
-    border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
-    font: inherit; width: 280px;
-  }
-  #popover .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
-
-  /* ---- map view ---- */
-  #map-view { padding: 18px; }
-  #map-wrap { max-width: 980px; margin: 0 auto; }
-  #map { width: 100%; height: 620px; background: var(--panel);
-         border: 1px solid var(--line); border-radius: 8px; }
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 10px 0; font-size: 13px; color: var(--muted); }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
-
-  /* ---- progress view ---- */
-  #progress-view { padding: 18px; max-width: 980px; margin: 0 auto; }
-  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase;
-                   letter-spacing: .04em; color: var(--muted); margin: 18px 0 10px; }
-  #treemap { display: flex; flex-wrap: wrap; gap: 10px; }
-  .mode-block {
-    border: 1px solid var(--line); border-radius: 8px; padding: 12px;
-    background: var(--panel); min-width: 210px; flex: 1 1 210px;
-  }
-  .mode-block h3 { margin: 0 0 4px; font-size: 14px; font-family: ui-monospace, monospace; }
-  .mode-block .count { float: right; color: var(--muted); font-weight: 400; }
-  .mode-block .def { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
-  .mode-block .notes { list-style: none; margin: 0; padding: 0; }
-  .mode-block .notes li { font-size: 12.5px; padding: 3px 0; border-top: 1px dashed var(--line); cursor: pointer; }
-  .mode-block .notes li:hover { color: var(--role-user); }
-  .mode-block .status {
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    padding: 1px 6px; border-radius: 8px; margin-left: 6px;
-  }
-  .status.candidate { background: #fef3c7; color: #92400e; }
-  .status.confirmed { background: #d1fae5; color: #065f46; }
-  .status.frozen    { background: #e0e7ff; color: #3730a3; }
-
-  #sugg-queue { background: var(--panel); border: 1px solid var(--line);
-                border-radius: 8px; padding: 12px; }
-  .queue-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
-  .queue-tools button {
-    border: 1px solid var(--line); background: var(--bg); font: inherit;
-    font-size: 12px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
-  }
-  .queue-tools .accept { border-color: var(--role-assistant); color: var(--role-assistant); }
-  .queue-tools .dismiss { border-color: #dc2626; color: #dc2626; }
-  .sugg-row { display: flex; gap: 8px; align-items: flex-start; padding: 7px 0;
-              border-top: 1px solid var(--line); font-size: 13px; }
-  .sugg-row .mode { font-family: ui-monospace, monospace; font-size: 12px;
-                    color: var(--sugg-border); min-width: 170px; }
-  .sugg-row .quote { flex: 1; cursor: pointer; }
-  .sugg-row .quote:hover { color: var(--role-user); }
-  .empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+  #toast.show { opacity: 1; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Cartwheel <span class="dim">error analysis</span></h1>
-  <div class="views">
-    <button data-view="trace" class="active">Trace</button>
-    <button data-view="map">Map</button>
-    <button data-view="progress">Progress</button>
+  <h1>Cartwheel <span>pilot review</span></h1>
+  <div class="nav">
+    <button id="prev" type="button">&larr;</button>
+    <span class="pos" id="pos">0 / 0</span>
+    <button id="next" type="button">&rarr;</button>
   </div>
   <div class="spacer"></div>
-  <div class="nav" id="trace-nav">
-    <button id="prev">&larr;</button>
-    <span class="pos" id="pos">0 / 0</span>
-    <button id="next">&rarr;</button>
-  </div>
   <div class="counts" id="counts"></div>
+  <div class="save-state" id="save-state"></div>
+  <button id="refresh" type="button">Reload from Langfuse</button>
 </header>
-
-<div id="trace-view" class="view active">
-  <div class="trace-header" id="trace-header"></div>
-  <div class="trace-body-wrap">
-    <div class="trace-body" id="trace-body"></div>
-    <div class="margin-col" id="margin-col"></div>
-  </div>
+<div class="app">
+  <aside class="rail">
+    <input id="filter" placeholder="Filter by id, role, intent…" />
+    <div id="list"></div>
+  </aside>
+  <main class="main">
+    <div class="trace-header" id="trace-header"></div>
+    <div id="trace-body"></div>
+  </main>
+  <aside class="side">
+    <div class="panel-title">Expected outcome</div>
+    <div class="expected" id="expected"></div>
+    <div class="panel-title">Your note</div>
+    <textarea id="note" aria-label="Annotation" placeholder="What happened, in your own words. First failure only."></textarea>
+    <div class="hint">Saved to analysis/state/annotations.json as you type. Arrow keys move between traces.</div>
+  </aside>
 </div>
-
-<div id="map-view" class="view">
-  <div id="map-wrap">
-    <div class="legend">
-      <span><span class="dot" style="background:#94a3b8"></span> trace</span>
-      <span><span class="dot" style="background:#1a1a1a"></span> in sample</span>
-      <span><span class="dot" style="background:#f97316"></span> annotated</span>
-    </div>
-    <canvas id="map"></canvas>
-  </div>
-</div>
-
-<div id="progress-view" class="view">
-  <div class="section-title">Failure modes</div>
-  <div id="treemap"></div>
-  <div class="section-title">Agent suggestions to review</div>
-  <div id="sugg-queue"></div>
-</div>
-
-<div id="popover"><input id="note-input" placeholder="what went wrong? (Enter to save)" /><div class="hint">first failure only, in your own words</div></div>
 <div id="toast"></div>
-
 <script>
-/* ------------------------------------------------------------------ *
- * State + API                                                         *
- * ------------------------------------------------------------------ */
 const state = {
-  samples: [],       // [{trace_id, reason, trace, meta, flags}]
-  annotations: [],   // [{id, trace_id, quote, start, end, note, ts}]
-  suggestions: [],   // [{id, trace_id, mode, quote, start, end}]
-  patterns: {},      // {mode: {definition, status, count, example_trace_ids, example_quotes}}
-  graph: {nodes: [], clusters: []},
-  cur: 0,            // index into samples
+  samples: [],
+  annotations: [],
+  cur: 0,
+  filter: "",
+  saveTimer: null,
 };
 
 const api = {
   async get(path) { const r = await fetch(path); return r.json(); },
   async post(path, body) {
-    await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'},
-                       body: JSON.stringify(body)});
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? "{}" : JSON.stringify(body),
+    });
+    return r.json();
   },
 };
 
-/* Annotations on disk are usually a bare array (what this app POSTs), but the
-   committed demo seed wraps them as {"annotations": [...]} with a little
-   metadata. Accept either on read; we always write the bare array. */
-function asAnnotationList(a) {
-  if (Array.isArray(a)) return a;
-  if (a && Array.isArray(a.annotations)) return a.annotations;
+function asAnnotationList(value) {
+  if (Array.isArray(value)) return value;
+  if (value && Array.isArray(value.annotations)) return value.annotations;
   return [];
 }
 
+function escape(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function scenarioId(sample) {
+  return (sample && sample.meta && sample.meta.scenario_id) || (sample && sample.trace_id) || "";
+}
+
+function noteFor(sample) {
+  if (!sample) return "";
+  const sid = scenarioId(sample);
+  const matches = state.annotations.filter((ann) =>
+    (ann.scenario_id && ann.scenario_id === sid) ||
+    ann.trace_id === sample.trace_id ||
+    (sample.trace_ids || []).includes(ann.trace_id)
+  );
+  const whole = matches.filter((ann) => !ann.quote);
+  const picked = whole.at(-1) || matches.at(-1);
+  return (picked && picked.note) || "";
+}
+
+function hasNote(sample) {
+  return Boolean(noteFor(sample).trim());
+}
+
+function visibleSamples() {
+  const q = state.filter.trim().toLowerCase();
+  if (!q) return state.samples;
+  return state.samples.filter((sample) => {
+    const meta = sample.meta || {};
+    const expected = sample.expected || {};
+    const tuple = expected.tuple || {};
+    const blob = [
+      scenarioId(sample), meta.role, expected.scenario_group,
+      tuple.intent, tuple.difficulty, sample.trace_id,
+    ].join(" ").toLowerCase();
+    return blob.includes(q);
+  });
+}
+
+function curSample() {
+  const vis = visibleSamples();
+  if (!vis.length) return null;
+  state.cur = Math.max(0, Math.min(state.cur, vis.length - 1));
+  return vis[state.cur];
+}
+
+function toast(message) {
+  const el = document.getElementById("toast");
+  el.textContent = message;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2400);
+}
+
+function setSaveState(text, kind) {
+  const el = document.getElementById("save-state");
+  el.textContent = text;
+  el.className = "save-state" + (kind ? " " + kind : "");
+}
+
+function backupAnnotations() {
+  try { localStorage.setItem("cartwheel_review_notes", JSON.stringify(state.annotations)); }
+  catch (err) {}
+}
+
+async function saveAnnotations() {
+  backupAnnotations();
+  setSaveState("Saving…");
+  try {
+    const result = await api.post("/api/annotations", state.annotations);
+    if (result && result.error) setSaveState("Save failed", "err");
+    else setSaveState("Saved", "ok");
+  } catch (err) {
+    setSaveState("Save failed", "err");
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(saveAnnotations, 400);
+}
+
+function upsertNote(text) {
+  const sample = curSample();
+  if (!sample) return;
+  const sid = scenarioId(sample);
+  const ts = new Date().toISOString();
+  const keep = state.annotations.filter((ann) => {
+    const same =
+      (ann.scenario_id && ann.scenario_id === sid) ||
+      ann.trace_id === sample.trace_id;
+    return !(same && !ann.quote);
+  });
+  if (text.trim()) {
+    keep.push({
+      id: "note-" + sid,
+      trace_id: sample.trace_id,
+      scenario_id: sid,
+      note: text,
+      ts,
+      author: "human",
+    });
+  }
+  state.annotations = keep;
+  renderList();
+  scheduleSave();
+}
+
+function pretty(value) {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") {
+    try { return JSON.stringify(JSON.parse(value), null, 2); }
+    catch (err) { return value; }
+  }
+  return JSON.stringify(value, null, 2);
+}
+
+function summarize(name, value) {
+  if (value && typeof value === "object") {
+    if (Array.isArray(value.orders)) return name + " — " + value.orders.length + " orders";
+    if (Array.isArray(value.results)) return name + " — " + value.results.length + " snippets";
+    if (Array.isArray(value.products)) return name + " — " + value.products.length + " products";
+    if (value.order && value.order.order_id) {
+      return name + " — order " + value.order.order_id + " " + (value.order.status || "");
+    }
+    if (value.policy_id) return name + " — " + value.policy_id;
+    if (value.ok === false) return name + " — error";
+  }
+  const text = pretty(value);
+  return text.length > 80 ? name + " — " + text.slice(0, 80) + "…" : (name || "value");
+}
+
+function renderPayload(name, value) {
+  const text = pretty(value);
+  if (!text) return "";
+  if (text.length < 280) return `<pre class="json">${escape(text)}</pre>`;
+  return `<details class="args"><summary>${escape(summarize(name, value))}</summary><pre class="json">${escape(text)}</pre></details>`;
+}
+
+function formatCall(name, args) {
+  if (!args || typeof args !== "object" || Array.isArray(args)) {
+    return escape(name) + "()";
+  }
+  const keys = Object.keys(args);
+  if (!keys.length) return escape(name) + "()";
+  const inner = keys.map((key) => {
+    const val = args[key];
+    const shown = typeof val === "string" ? JSON.stringify(val) : JSON.stringify(val);
+    return key + "=" + shown;
+  }).join(", ");
+  return escape(name) + "(" + escape(inner) + ")";
+}
+
+function renderMsg(message) {
+  const role = message.role || "assistant";
+  const retrieval = message.retrieval ? " retrieval" : "";
+  if (role === "tool_call") {
+    return `<div class="msg" data-role="tool_call">
+      <div class="role">tool call</div>
+      <div class="fn">${formatCall(message.name || "tool", message.arguments)}</div>
+    </div>`;
+  }
+  if (role === "tool_result") {
+    return `<div class="msg${retrieval}" data-role="tool_result">
+      <div class="role">${message.retrieval ? "retrieved" : "tool result"}</div>
+      ${renderPayload(message.name || "result", message.content)}
+    </div>`;
+  }
+  const label = role.replace(/_/g, " ");
+  return `<div class="msg" data-role="${escape(role)}">
+    <div class="role">${escape(label)}</div>
+    <div class="text">${escape(message.text || "")}</div>
+  </div>`;
+}
+
+function renderExpected(sample, targetId) {
+  const el = document.getElementById(targetId);
+  const expected = sample && sample.expected;
+  if (!expected) {
+    el.innerHTML = '<div class="empty">No matching scenario record.</div>';
+    return;
+  }
+  const title = expected.outcome || expected.criterion || "(no named outcome)";
+  const source = expected.source || {};
+  const bits = [];
+  bits.push(`<h2>${escape(title)}</h2>`);
+  bits.push(`<div class="chip">${escape(expected.evaluation || "unknown")}</div>`);
+  if (expected.scenario_group) bits.push(`<div class="chip">${escape(expected.scenario_group)}</div>`);
+  if (expected.reason) bits.push(`<div class="reason">${escape(expected.reason)}</div>`);
+  if (source.type || source.reference) {
+    bits.push(`<div class="source">${escape([source.type, source.reference].filter(Boolean).join(" · "))}</div>`);
+  }
+  el.innerHTML = bits.join("");
+}
+
+function renderHeader() {
+  const sample = curSample();
+  const el = document.getElementById("trace-header");
+  const vis = visibleSamples();
+  document.getElementById("pos").textContent = vis.length ? `${state.cur + 1} / ${vis.length}` : "0 / 0";
+  const annotated = state.samples.filter(hasNote).length;
+  document.getElementById("counts").textContent =
+    `${annotated} / ${state.samples.length} annotated`;
+  if (!sample) {
+    el.innerHTML = '<span class="empty">No traces loaded. Use Reload from Langfuse.</span>';
+    return;
+  }
+  const meta = sample.meta || {};
+  const expected = sample.expected || {};
+  const tuple = expected.tuple || {};
+  const chips = [];
+  if (meta.role) chips.push(`<span class="chip">${escape(meta.role)}</span>`);
+  if (expected.scenario_group) chips.push(`<span class="chip">${escape(expected.scenario_group)}</span>`);
+  if (tuple.intent) chips.push(`<span class="chip">${escape(tuple.intent)}</span>`);
+  if (tuple.difficulty) chips.push(`<span class="chip">${escape(tuple.difficulty)}</span>`);
+  if (tuple.order_id) chips.push(`<span class="chip">order ${escape(tuple.order_id)}</span>`);
+  if (meta.prompt_version) chips.push(`<span class="chip">prompt ${escape(meta.prompt_version)}</span>`);
+  (sample.flags || []).forEach((flag) => chips.push(`<span class="chip flag">${escape(flag)}</span>`));
+  const links = (sample.trace_ids || [sample.trace_id]).map((id) =>
+    `<a class="langfuse" href="${escape(sample.permalink.replace(/\/traces\/[^/]+$/, "/traces/" + id))}" target="_blank" rel="noreferrer">${escape(id.slice(0, 8))}…</a>`
+  ).join(" ");
+  el.innerHTML = `<div><span class="tid">${escape(scenarioId(sample))}</span>${chips.join("")}</div>
+    <div class="langfuse">Langfuse ${links}</div>`;
+}
+
+function renderTrace() {
+  const sample = curSample();
+  const body = document.getElementById("trace-body");
+  if (!sample || !Array.isArray(sample.trace) || !sample.trace.length) {
+    body.innerHTML = '<div class="empty">No conversation on this trace.</div>';
+    return;
+  }
+  const html = [];
+  let i = 0;
+  const msgs = sample.trace;
+  while (i < msgs.length) {
+    const message = msgs[i];
+    if (message.role === "turn_break") {
+      html.push(`<div class="turn-break">${escape(message.label || "Follow-up")}</div>`);
+      i += 1;
+      continue;
+    }
+    if (message.role === "tool_call") {
+      const parts = [renderMsg(message)];
+      const retrieval = Boolean(message.retrieval);
+      if (i + 1 < msgs.length && msgs[i + 1].role === "tool_result") {
+        parts.push(renderMsg(msgs[i + 1]));
+        i += 1;
+      }
+      html.push(`<div class="step${retrieval ? " retrieval" : ""}">${parts.join("")}</div>`);
+    } else {
+      html.push(`<div class="step">${renderMsg(message)}</div>`);
+    }
+    i += 1;
+  }
+  body.innerHTML = html.join("");
+}
+
+function renderList() {
+  const el = document.getElementById("list");
+  const vis = visibleSamples();
+  el.innerHTML = vis.map((sample, index) => {
+    const meta = sample.meta || {};
+    const expected = sample.expected || {};
+    const tuple = expected.tuple || {};
+    const tools = (sample.features || {}).tool_call_count || 0;
+    const active = index === state.cur ? " active" : "";
+    return `<button class="scenario${active}" data-index="${index}" type="button">
+      <span class="id"><span class="dot${hasNote(sample) ? " filled" : ""}"></span>${escape(scenarioId(sample))}</span>
+      <span class="meta">${escape([meta.role, tuple.intent, tools + " tools"].filter(Boolean).join(" · "))}</span>
+    </button>`;
+  }).join("") || '<div class="empty">No matching traces.</div>';
+}
+
+function renderAll() {
+  renderList();
+  renderHeader();
+  const sample = curSample();
+  renderExpected(sample, "expected");
+  renderTrace();
+  const note = document.getElementById("note");
+  if (document.activeElement !== note) note.value = noteFor(sample);
+}
+
 async function loadAll() {
-  const [samples, annotations, suggestions, patterns, graph] = await Promise.all([
-    api.get('/api/samples'), api.get('/api/annotations'),
-    api.get('/api/suggestions'), api.get('/api/patterns'), api.get('/api/graph'),
+  const [samples, annotations] = await Promise.all([
+    api.get("/api/samples"),
+    api.get("/api/annotations"),
   ]);
   state.samples = Array.isArray(samples) ? samples : [];
   state.annotations = asAnnotationList(annotations);
-  state.suggestions = Array.isArray(suggestions) ? suggestions : [];
-  state.patterns = patterns && typeof patterns === 'object' ? patterns : {};
-  state.graph = graph && graph.nodes ? graph : {nodes: [], clusters: []};
+  renderAll();
 }
 
-/* localStorage backup of human annotations, per SKILL.md */
-function backupAnnotations() {
-  try { localStorage.setItem('cartwheel_annotations', JSON.stringify(state.annotations)); }
-  catch (e) {}
-}
-async function saveAnnotations() {
-  backupAnnotations();
-  await api.post('/api/annotations', state.annotations);
+function move(delta) {
+  const vis = visibleSamples();
+  if (!vis.length) return;
+  state.cur = (state.cur + delta + vis.length) % vis.length;
+  renderAll();
 }
 
-/* ------------------------------------------------------------------ *
- * Rendering: the trace view                                          *
- * ------------------------------------------------------------------ */
-function curTrace() { return state.samples[state.cur]; }
-
-function renderHeader() {
-  const s = curTrace();
-  const h = document.getElementById('trace-header');
-  if (!s) { h.innerHTML = '<span class="meta">no samples yet</span>'; return; }
-  const m = s.meta || {};
-  const bits = [];
-  bits.push(`<span class="tid">${escape(s.trace_id)}</span>`);
-  if (m.role)  bits.push(`<span class="meta">role: ${escape(m.role)}</span>`);
-  if (m.store) bits.push(`<span class="meta">store: ${escape(m.store)}</span>`);
-  if (m.prompt_version) bits.push(`<span class="meta">prompt: ${escape(m.prompt_version)}</span>`);
-  (s.flags || []).forEach(f => bits.push(`<span class="flag">${escape(f)}</span>`));
-  h.innerHTML = bits.join(' ');
-}
-
-/* Render one trace as a sequence of steps. A tool_call and the tool_result
-   that follows it are grouped into one .step container (common region). */
-function renderTrace() {
-  const s = curTrace();
-  const body = document.getElementById('trace-body');
-  if (!s || !Array.isArray(s.trace)) { body.innerHTML = ''; return; }
-  const html = [];
-  let i = 0;
-  const msgs = s.trace;
-  while (i < msgs.length) {
-    const m = msgs[i];
-    if (m.role === 'tool_call') {
-      // group this call with an immediately-following result
-      const parts = [renderMsg(m, i)];
-      if (i + 1 < msgs.length && msgs[i + 1].role === 'tool_result') {
-        parts.push(renderMsg(msgs[i + 1], i + 1));
-        i++;
-      }
-      html.push(`<div class="step">${parts.join('')}</div>`);
-    } else {
-      html.push(`<div class="step">${renderMsg(m, i)}</div>`);
-    }
-    i++;
-  }
-  body.innerHTML = html.join('');
-  applyHighlights();
-  layoutMargin();
-}
-
-function renderMsg(m, idx) {
-  const role = m.role || 'assistant';
-  const label = (m.label || role).replace(/_/g, ' ');
-  const boiler = m.boilerplate ? ' boiler' : '';
-  let inner = '';
-  if (role === 'tool_call') {
-    inner = `<div class="fn">${escape(m.name || 'tool')}()</div>`;
-    if (m.arguments !== undefined) {
-      inner += `<details class="args"><summary>arguments</summary>` +
-               `<pre class="json">${escape(pretty(m.arguments))}</pre></details>`;
-    }
-  } else if (role === 'tool_result') {
-    const full = pretty(m.content !== undefined ? m.content : m.text);
-    const long = full.length > 240;
-    if (long) {
-      inner = `<details class="args"><summary class="result-summary">result (${full.length} chars)</summary>` +
-              `<pre class="json annotatable" data-idx="${idx}">${escape(full)}</pre></details>`;
-    } else {
-      inner = `<pre class="json annotatable" data-idx="${idx}">${escape(full)}</pre>`;
-    }
-  } else {
-    const text = m.text !== undefined ? m.text : pretty(m.content);
-    inner = `<div class="text annotatable" data-idx="${idx}">${escape(text)}</div>`;
-  }
-  return `<div class="msg${boiler}" data-role="${role}" data-idx="${idx}">` +
-         `<div class="role">${escape(label)}</div>${inner}</div>`;
-}
-
-/* ------------------------------------------------------------------ *
- * Highlights + margin notes                                          *
- * ------------------------------------------------------------------ */
-function itemsForTrace() {
-  const tid = curTrace() ? curTrace().trace_id : null;
-  const anns = state.annotations.filter(a => a.trace_id === tid).map(a => ({...a, kind: 'human'}));
-  const sugg = state.suggestions.filter(s => s.trace_id === tid).map(s => ({...s, kind: 'sugg'}));
-  return [...anns, ...sugg];
-}
-
-/* Wrap each item's [start,end] span within its target block in a <span.hl>.
-   We re-render text then walk offsets, so overlapping spans stay simple: we
-   only highlight the first occurrence of the quote inside its block. */
-function applyHighlights() {
-  const items = itemsForTrace();
-  document.querySelectorAll('.annotatable').forEach(el => {
-    const idx = parseInt(el.dataset.idx, 10);
-    const mine = items.filter(it => it.idx === idx || it.idx === undefined);
-    if (!mine.length) return;
-    let text = el.textContent;
-    // Build a list of [start, end, item] ranges found by quote match.
-    const ranges = [];
-    mine.forEach(it => {
-      if (!it.quote) return;
-      const pos = text.indexOf(it.quote);
-      if (pos >= 0) ranges.push([pos, pos + it.quote.length, it]);
-    });
-    if (!ranges.length) return;
-    ranges.sort((a, b) => a[0] - b[0]);
-    let out = '', cursor = 0;
-    ranges.forEach(([s, e, it]) => {
-      if (s < cursor) return; // skip overlaps
-      out += escape(text.slice(cursor, s));
-      const cls = it.kind === 'sugg' ? 'hl sugg' : 'hl';
-      out += `<span class="${cls}" data-item="${it.id}">${escape(text.slice(s, e))}</span>`;
-      cursor = e;
-    });
-    out += escape(text.slice(cursor));
-    el.innerHTML = out;
-  });
-}
-
-/* Position margin notes absolutely, top offset = highlight top relative to the
-   margin container (NO scrollTop; that double-counts). Stack with a min gap. */
-function layoutMargin() {
-  const col = document.getElementById('margin-col');
-  col.innerHTML = '';
-  const items = itemsForTrace();
-  if (!items.length) return;
-  const colRect = col.getBoundingClientRect();
-  const placed = [];
-  let lastBottom = 0;
-  // order by vertical position of the highlight
-  const withPos = items.map(it => {
-    const hl = document.querySelector(`.hl[data-item="${it.id}"]`);
-    const top = hl ? (hl.getBoundingClientRect().top - colRect.top) : 0;
-    return {it, top, hl};
-  }).sort((a, b) => a.top - b.top);
-
-  withPos.forEach(({it, top, hl}) => {
-    const note = document.createElement('div');
-    note.className = 'mnote ' + (it.kind === 'sugg' ? 'sugg' : 'human');
-    note.dataset.item = it.id;
-    let html = '';
-    if (it.kind === 'sugg') html += `<div class="tag">agent · ${escape(it.mode || '')}</div>`;
-    if (it.quote) html += `<div class="quote">"${escape(clip(it.quote, 80))}"</div>`;
-    html += `<div class="body">${escape(it.note || (it.kind === 'sugg' ? '(suggested instance)' : ''))}</div>`;
-    if (it.kind === 'sugg') {
-      html += `<div class="acts"><button class="accept" data-accept="${it.id}">accept</button>` +
-              `<button class="reject" data-reject="${it.id}">dismiss</button></div>`;
-    } else {
-      html += `<div class="acts"><button data-del="${it.id}">delete</button></div>`;
-    }
-    note.innerHTML = html;
-    const y = Math.max(top, lastBottom);
-    note.style.top = y + 'px';
-    col.appendChild(note);
-    lastBottom = y + note.offsetHeight + 8;
-
-    // hover linking between note and highlight
-    if (hl) {
-      note.addEventListener('mouseenter', () => hl.classList.add('outline'));
-      note.addEventListener('mouseleave', () => hl.classList.remove('outline'));
-      hl.addEventListener('mouseenter', () => note.classList.add('outline'));
-      hl.addEventListener('mouseleave', () => note.classList.remove('outline'));
-    }
-    placed.push(note);
-  });
-
-  col.querySelectorAll('[data-accept]').forEach(b =>
-    b.onclick = () => acceptSuggestion(b.dataset.accept));
-  col.querySelectorAll('[data-reject]').forEach(b =>
-    b.onclick = () => dismissSuggestion(b.dataset.reject));
-  col.querySelectorAll('[data-del]').forEach(b =>
-    b.onclick = () => deleteAnnotation(b.dataset.del));
-}
-
-/* ------------------------------------------------------------------ *
- * In-place annotation                                                *
- * ------------------------------------------------------------------ */
-let pendingRange = null;   // the wrapped pending-highlight span
-let pendingCtx = null;     // {trace_id, quote, idx}
-
-document.getElementById('trace-body').addEventListener('mouseup', () => {
-  const sel = window.getSelection();
-  if (!sel || sel.isCollapsed) return;
-  const text = sel.toString().trim();
-  if (!text) return;
-  const anchor = sel.anchorNode && sel.anchorNode.parentElement
-    ? sel.anchorNode.parentElement.closest('.annotatable') : null;
-  if (!anchor) return;
-
-  // Wrap the range in a pending highlight BEFORE focusing the input, so the
-  // native selection clearing does not lose the reviewer's context.
-  const range = sel.getRangeAt(0);
-  const span = document.createElement('span');
-  span.className = 'hl pending-highlight';
-  try { range.surroundContents(span); } catch (e) { return; }
-  pendingRange = span;
-  pendingCtx = {
-    trace_id: curTrace().trace_id,
-    quote: text,
-    idx: parseInt(anchor.dataset.idx, 10),
-  };
-  sel.removeAllRanges();
-
-  const rect = span.getBoundingClientRect();
-  const pop = document.getElementById('popover');
-  pop.style.display = 'block';
-  pop.style.left = (window.scrollX + rect.left) + 'px';
-  pop.style.top = (window.scrollY + rect.bottom + 6) + 'px';
-  const input = document.getElementById('note-input');
-  input.value = '';
-  input.focus();
+document.getElementById("prev").addEventListener("click", () => move(-1));
+document.getElementById("next").addEventListener("click", () => move(1));
+document.getElementById("list").addEventListener("click", (event) => {
+  const button = event.target.closest(".scenario");
+  if (!button) return;
+  state.cur = Number(button.dataset.index);
+  renderAll();
 });
-
-document.getElementById('note-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { commitAnnotation(); }
-  else if (e.key === 'Escape') { cancelAnnotation(); }
+document.getElementById("filter").addEventListener("input", (event) => {
+  state.filter = event.target.value;
+  state.cur = 0;
+  renderAll();
 });
-document.addEventListener('mousedown', (e) => {
-  const pop = document.getElementById('popover');
-  if (pop.style.display === 'block' && !pop.contains(e.target)) cancelAnnotation();
+document.getElementById("note").addEventListener("input", (event) => {
+  upsertNote(event.target.value);
 });
-
-function clearPending() {
-  if (pendingRange && pendingRange.parentNode) {
-    const parent = pendingRange.parentNode;
-    while (pendingRange.firstChild) parent.insertBefore(pendingRange.firstChild, pendingRange);
-    parent.removeChild(pendingRange);
-    parent.normalize();
-  }
-  pendingRange = null; pendingCtx = null;
-  document.getElementById('popover').style.display = 'none';
-}
-function cancelAnnotation() { clearPending(); renderTrace(); }
-
-async function commitAnnotation() {
-  const note = document.getElementById('note-input').value.trim();
-  if (!note || !pendingCtx) { clearPending(); return; }
-  state.annotations.push({
-    id: 'a' + Date.now() + Math.floor(Math.random() * 1000),
-    trace_id: pendingCtx.trace_id,
-    quote: pendingCtx.quote,
-    idx: pendingCtx.idx,
-    note, ts: new Date().toISOString(),
-  });
-  clearPending();
-  await saveAnnotations();
-  renderTrace();
-  renderProgress();
-  toast('saved · the agent is grouping your notes');
-}
-
-async function deleteAnnotation(id) {
-  state.annotations = state.annotations.filter(a => a.id !== id);
-  await saveAnnotations();
-  renderTrace(); renderProgress();
-}
-
-/* Accepting a suggestion promotes it to a human-confirmed annotation with
-   source accepted_suggestion, and removes it from the queue. */
-async function acceptSuggestion(id) {
-  const s = state.suggestions.find(x => x.id === id);
-  if (!s) return;
-  state.annotations.push({
-    id: 'a' + Date.now() + Math.floor(Math.random() * 1000),
-    trace_id: s.trace_id, quote: s.quote, idx: s.idx,
-    note: s.mode ? `[${s.mode}]` : '(accepted)',
-    source: 'accepted_suggestion', mode: s.mode, ts: new Date().toISOString(),
-  });
-  state.suggestions = state.suggestions.filter(x => x.id !== id);
-  await saveAnnotations();
-  await api.post('/api/suggestions', state.suggestions);
-  renderTrace(); renderProgress();
-}
-async function dismissSuggestion(id) {
-  state.suggestions = state.suggestions.filter(x => x.id !== id);
-  await api.post('/api/suggestions', state.suggestions);
-  renderTrace(); renderProgress();
-}
-
-/* ------------------------------------------------------------------ *
- * Progress view                                                      *
- * ------------------------------------------------------------------ */
-function renderProgress() {
-  renderTreemap();
-  renderQueue();
-}
-
-/* Normalize the taxonomy into [{name, ...}] regardless of on-disk shape.
-   During a live session the agent pushes a flat map {mode_name: {...}} as it
-   groups notes. The committed demo/final state uses the Artifact L schema:
-   {modes: [{name, ...}], human_signoff, reconciliation}. Accept both. */
-function normalizePatterns(p) {
-  if (!p || typeof p !== 'object') return [];
-  if (Array.isArray(p.modes)) return p.modes.filter(m => m && m.name);
-  return Object.entries(p).map(([name, m]) => ({name, ...(m || {})}));
-}
-function modeCount(m) {
-  // a live mode carries `count`; a final mode carries the any-instance count.
-  if (typeof m.count === 'number') return m.count;
-  if (typeof m.any_instance_count === 'number') return m.any_instance_count;
-  if (typeof m.first_failure_count === 'number') return m.first_failure_count;
-  return (m.example_trace_ids || []).length;
-}
-
-function renderTreemap() {
-  const el = document.getElementById('treemap');
-  const modes = normalizePatterns(state.patterns);
-  if (!modes.length) { el.innerHTML = '<div class="empty">No modes yet. As you annotate, the agent groups your notes here.</div>'; return; }
-  // block area roughly proportional to count via flex-grow
-  modes.sort((a, b) => modeCount(b) - modeCount(a));
-  el.innerHTML = modes.map(m => {
-    // a live mode has free-text example_quotes; a final mode lists trace ids.
-    const ids = m.example_trace_ids || [];
-    const quotes = m.example_quotes || [];
-    const items = (quotes.length ? quotes : ids).slice(0, 6).map((val, i) =>
-      `<li data-tid="${escape(quotes.length ? (ids[i] || '') : val)}">${escape(clip(val, 90))}</li>`).join('');
-    const status = m.status || 'candidate';
-    const grow = Math.max(1, modeCount(m));
-    const sev = typeof m.severity === 'number' ? ` · sev ${m.severity}` : '';
-    return `<div class="mode-block" style="flex-grow:${grow}">` +
-      `<h3>${escape(m.name)}<span class="status ${status}">${status}</span>` +
-      `<span class="count">${modeCount(m)}${sev}</span></h3>` +
-      `<div class="def">${escape(m.definition || '')}</div>` +
-      `<ul class="notes">${items}</ul></div>`;
-  }).join('');
-  el.querySelectorAll('li[data-tid]').forEach(li => {
-    li.onclick = () => { if (li.dataset.tid) gotoTrace(li.dataset.tid); };
-  });
-}
-
-function renderQueue() {
-  const el = document.getElementById('sugg-queue');
-  if (!state.suggestions.length) { el.innerHTML = '<div class="empty">No pending suggestions.</div>'; return; }
-  const rows = state.suggestions.map(s =>
-    `<div class="sugg-row"><input type="checkbox" data-id="${s.id}" checked />` +
-    `<span class="mode">${escape(s.mode || '')}</span>` +
-    `<span class="quote" data-tid="${escape(s.trace_id)}">"${escape(clip(s.quote || '', 110))}"</span></div>`
-  ).join('');
-  el.innerHTML =
-    `<div class="queue-tools">` +
-    `<label><input type="checkbox" id="sel-all" checked /> select all</label>` +
-    `<button class="accept" id="accept-sel">Accept selected</button>` +
-    `<button class="dismiss" id="dismiss-sel">Dismiss selected</button>` +
-    `<span class="empty" style="padding:0">${state.suggestions.length} pending · favor recall, prune the rest</span>` +
-    `</div>` + rows;
-
-  document.getElementById('sel-all').onchange = (e) => {
-    el.querySelectorAll('.sugg-row input[type=checkbox]').forEach(c => c.checked = e.target.checked);
-  };
-  el.querySelectorAll('.quote[data-tid]').forEach(q =>
-    q.onclick = () => gotoTrace(q.dataset.tid));
-  document.getElementById('accept-sel').onclick = () => bulkQueue(true);
-  document.getElementById('dismiss-sel').onclick = () => bulkQueue(false);
-}
-
-async function bulkQueue(accept) {
-  const el = document.getElementById('sugg-queue');
-  const ids = [...el.querySelectorAll('.sugg-row input[type=checkbox]:checked')].map(c => c.dataset.id);
-  for (const id of ids) { accept ? await acceptSuggestion(id) : await dismissSuggestion(id); }
-}
-
-/* ------------------------------------------------------------------ *
- * Map view (canvas scatter of the 2D projection)                     *
- * ------------------------------------------------------------------ */
-function renderMap() {
-  const canvas = document.getElementById('map');
-  const nodes = state.graph.nodes || [];
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = 620;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, w, h);
-  if (!nodes.length) {
-    ctx.fillStyle = '#9ca3af'; ctx.font = '13px sans-serif';
-    ctx.fillText('No projection yet (GET /api/graph is empty).', 20, 30);
+document.getElementById("refresh").addEventListener("click", async () => {
+  setSaveState("Loading traces…");
+  const result = await api.post("/api/refresh", {});
+  if (result && result.error) {
+    setSaveState(result.error, "err");
+    toast(result.error);
     return;
   }
-  const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
-  const minX = Math.min(...xs), maxX = Math.max(...xs);
-  const minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = 30;
-  const sx = v => pad + (v - minX) / ((maxX - minX) || 1) * (w - 2 * pad);
-  const sy = v => pad + (v - minY) / ((maxY - minY) || 1) * (h - 2 * pad);
-  const hues = ['#94a3b8','#a78bfa','#60a5fa','#34d399','#fbbf24','#f472b6','#22d3ee','#fb923c'];
-  const sampleIds = new Set(state.samples.map(s => s.trace_id));
-  const annIds = new Set(state.annotations.map(a => a.trace_id));
-
-  nodes.forEach(n => {
-    const annotated = annIds.has(n.trace_id);
-    const sampled = sampleIds.has(n.trace_id);
-    ctx.beginPath();
-    ctx.arc(sx(n.x), sy(n.y), sampled ? 6 : 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = annotated ? '#f97316' : hues[(n.cluster || 0) % hues.length];
-    ctx.fill();
-    if (sampled) { ctx.lineWidth = 1.5; ctx.strokeStyle = '#1a1a1a'; ctx.stroke(); }
-  });
-
-  canvas._nodes = nodes.map(n => ({...n, px: sx(n.x), py: sy(n.y)}));
-}
-document.getElementById('map').addEventListener('click', (e) => {
-  const canvas = document.getElementById('map');
-  const nodes = canvas._nodes || [];
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  let best = null, bestD = 1e9;
-  const sampleIds = new Set(state.samples.map(s => s.trace_id));
-  nodes.forEach(n => {
-    if (!sampleIds.has(n.trace_id)) return;
-    const d = (n.px - mx) ** 2 + (n.py - my) ** 2;
-    if (d < bestD) { bestD = d; best = n; }
-  });
-  if (best && bestD < 200) gotoTrace(best.trace_id);
-});
-
-/* ------------------------------------------------------------------ *
- * Navigation + view switching                                        *
- * ------------------------------------------------------------------ */
-function gotoTrace(tid) {
-  const i = state.samples.findIndex(s => s.trace_id === tid);
-  if (i < 0) { toast('that trace is not in the current sample'); return; }
-  state.cur = i;
-  switchView('trace');
-  renderHeader(); renderTrace(); updatePos();
-}
-function updatePos() {
-  document.getElementById('pos').textContent =
-    state.samples.length ? `${state.cur + 1} / ${state.samples.length}` : '0 / 0';
-}
-document.getElementById('prev').onclick = () => {
-  if (state.cur > 0) { state.cur--; renderHeader(); renderTrace(); updatePos(); }
-};
-document.getElementById('next').onclick = () => {
-  if (state.cur < state.samples.length - 1) { state.cur++; renderHeader(); renderTrace(); updatePos(); }
-};
-document.addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.key === 'j' || e.key === 'ArrowDown') document.getElementById('next').click();
-  if (e.key === 'k' || e.key === 'ArrowUp') document.getElementById('prev').click();
-});
-
-function switchView(name) {
-  document.querySelectorAll('.views button').forEach(b =>
-    b.classList.toggle('active', b.dataset.view === name));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(name + '-view').classList.add('active');
-  document.getElementById('trace-nav').style.display = name === 'trace' ? 'flex' : 'none';
-  if (name === 'map') renderMap();
-  if (name === 'progress') renderProgress();
-}
-document.querySelectorAll('.views button').forEach(b =>
-  b.onclick = () => switchView(b.dataset.view));
-
-function updateCounts() {
-  document.getElementById('counts').textContent =
-    `${state.samples.length} traces · ${state.annotations.length} notes · ` +
-    `${normalizePatterns(state.patterns).length} modes · ${state.suggestions.length} suggestions`;
-}
-
-/* ------------------------------------------------------------------ *
- * Polling: pick up agent pushes (samples, suggestions, patterns) and *
- * replayed annotations. Compare-and-render, ~2s, like the watcher.   *
- * ------------------------------------------------------------------ */
-let lastSig = '';
-async function poll() {
-  try {
-    const [samples, suggestions, patterns, annotations] = await Promise.all([
-      api.get('/api/samples'), api.get('/api/suggestions'),
-      api.get('/api/patterns'), api.get('/api/annotations'),
-    ]);
-    const newSampleCount = Array.isArray(samples) ? samples.length : 0;
-    const grewSamples = newSampleCount > state.samples.length;
-    const newSuggCount = Array.isArray(suggestions) ? suggestions.length : 0;
-    const grewSugg = newSuggCount > state.suggestions.length;
-
-    // Merge remote annotations that this client did not create (replay demo,
-    // or a second reviewer). De-dup by id, falling back to a content key for
-    // seeded items that arrive without one.
-    const key = a => a.id || `${a.trace_id}::${(a.note || '').slice(0, 40)}`;
-    const seen = new Set(state.annotations.map(key));
-    const remote = asAnnotationList(annotations);
-    const merged = [...state.annotations];
-    remote.forEach(a => { const k = key(a); if (!seen.has(k)) { seen.add(k); merged.push(a); } });
-
-    const sig = JSON.stringify([newSampleCount, newSuggCount,
-      normalizePatterns(patterns).length, merged.length]);
-    if (sig === lastSig) return;
-    lastSig = sig;
-
-    state.samples = Array.isArray(samples) ? samples : state.samples;
-    state.suggestions = Array.isArray(suggestions) ? suggestions : state.suggestions;
-    state.patterns = patterns && typeof patterns === 'object' ? patterns : state.patterns;
-    state.annotations = merged;
-
-    if (grewSamples) toast(`new traces added to your batch (${newSampleCount})`);
-    if (grewSugg) toast(`new agent suggestions to review (${newSuggCount})`);
-
-    renderHeader(); renderTrace(); renderProgress(); updatePos(); updateCounts();
-  } catch (e) { /* server not up yet; keep trying */ }
-}
-
-/* ------------------------------------------------------------------ *
- * Utilities                                                          *
- * ------------------------------------------------------------------ */
-function escape(s) {
-  return String(s === undefined || s === null ? '' : s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-function pretty(v) {
-  if (typeof v === 'string') return v;
-  try { return JSON.stringify(v, null, 2); } catch (e) { return String(v); }
-}
-function clip(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n) + '…' : s; }
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove('show'), 2600);
-}
-window.addEventListener('resize', () => {
-  if (document.getElementById('map-view').classList.contains('active')) renderMap();
-  else layoutMargin();
-});
-
-/* ------------------------------------------------------------------ *
- * Boot                                                               *
- * ------------------------------------------------------------------ */
-(async function boot() {
+  toast("Loaded " + (result.count || 0) + " scenarios");
   await loadAll();
-  renderHeader(); renderTrace(); renderProgress(); updatePos(); updateCounts();
-  setInterval(poll, 2000);
-})();
+  setSaveState("Saved", "ok");
+});
+document.addEventListener("keydown", (event) => {
+  if (event.target.tagName === "TEXTAREA" || event.target.tagName === "INPUT") return;
+  if (event.key === "ArrowLeft" || event.key === "k") move(-1);
+  if (event.key === "ArrowRight" || event.key === "j") move(1);
+});
+
+loadAll();
+setInterval(async () => {
+  const samples = await api.get("/api/samples");
+  if (Array.isArray(samples) && samples.length !== state.samples.length) {
+    state.samples = samples;
+    renderAll();
+    toast("Sample set updated");
+  }
+}, 8000);
 </script>
 </body>
 </html>
