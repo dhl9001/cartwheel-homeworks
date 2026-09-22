@@ -1,5 +1,5 @@
 {
-  "accepted_at": "2026-09-22T16:46:00+01:00",
+  "accepted_at": "2026-09-22T17:38:00+01:00",
   "source": "Candidate groups from batch 1, updated with batch 2 notes. Status is candidate: close negatives and evaluator type are still open.",
   "modes": [
     {
@@ -124,7 +124,8 @@
         "a1790086748902",
         "a1790086490598",
         "a1790086571122",
-        "a1790090624375"
+        "a1790090624375",
+        "a1790094707509"
       ],
       "example_trace_ids": [
         "1093caaaa35d7fc33ca668496a68842c",
@@ -135,7 +136,8 @@
         "fe48b220ba8543b0c2ec08b3ef43ab85",
         "b3e1af7cbf217c01d007a28abdd190c1",
         "6600cf6d048b712a9ad826bd6e5a6bc1",
-        "5a7afbc8afe734e685213bd4b2ebd247"
+        "5a7afbc8afe734e685213bd4b2ebd247",
+        "56a3af89fae6e68c1b8a385a3ff588ca"
       ]
     },
     {
@@ -192,15 +194,57 @@
     },
     {
       "name": "premature_refund_claim",
-      "title": "The reply announces a refund before the tool can finish it",
+      "title": "The reply states a refund is available before it is settled",
       "status": "candidate",
-      "definition": "The reply says it will request or complete a refund before the refund tool reports a completed refund, including when the refund must go to a human.",
-      "requirement_source": "SPEC.md RESP-2",
+      "definition": "The reply states that an order is refund-eligible, or that a refund is being submitted, while a human still has to approve it, a policy question is still open, or the order record is inconsistent.",
+      "requirement_source": "SPEC.md RESP-2 covers claiming the refund succeeded before the tool does. Stating eligibility before human review, an open policy question, or a bad order record is not written in ESC-1.",
       "created_from": [
-        "a1790087452459"
+        "a1790087452459",
+        "a1790094035661",
+        "a1790094115166",
+        "a1790094234542",
+        "a1790094260938",
+        "a1790094438080",
+        "a1790094862769",
+        "a1790094538580"
       ],
       "example_trace_ids": [
-        "fa40a4e2c246c574daf5f26a3540e371"
+        "fa40a4e2c246c574daf5f26a3540e371",
+        "76f849d225d9529e4b2bf670b8dbbd43",
+        "c1567cfaf2bf6538d06936d1e9395b2d",
+        "247048e0f4009040f21be395dcc11eab",
+        "01fdb9f9a4a40c8ac10ce99778e0cd30",
+        "70a555857738eb20382c25bb495c04db",
+        "ef7942dc762a4cac3ec0a0e6297f408f"
+      ],
+      "boundary": "full-079 and full-081 are close negatives: issue_refund ran and the review recorded no failure. full-094 stays in this group; the reason there is a data issue rather than a human.",
+      "close_negatives": [
+        {
+          "annotation_id": "a1790093957517",
+          "trace_id": "45cd21196bed1e4db29545ee4fb62004",
+          "scenario_id": "full-079"
+        },
+        {
+          "annotation_id": "a1790093989284",
+          "trace_id": "5aa1424fdc17ac65453537981f6401c8",
+          "scenario_id": "full-081"
+        }
+      ],
+      "rejected_search_hits": [
+        "full-039",
+        "full-043",
+        "full-053",
+        "full-083",
+        "full-084",
+        "full-086",
+        "full-087",
+        "full-098",
+        "full-092",
+        "full-022",
+        "full-023",
+        "full-044",
+        "full-055",
+        "full-096"
       ]
     },
     {
@@ -266,6 +310,10 @@
     {
       "at": "2026-09-22T16:46:00+01:00",
       "change": "After batch 2, added escalated_support_user from the full-033 and full-099 notes, and widened cited_policy_id to any policy document id. Three single notes stayed ungrouped."
+    },
+    {
+      "at": "2026-09-22T17:38:00+01:00",
+      "change": "After the refund search, tightened premature_refund_claim so it covers stating eligibility or submitting a refund while human review, policy, or the order record is still unresolved. full-079 and full-081 are close negatives. full-073 joined unasked_facts."
     }
   ]
 }
