@@ -166,7 +166,8 @@
     background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
     padding: 12px; margin-bottom: 12px;
   }
-  .mode-block h3 { margin: 0 0 4px; font-family: ui-monospace, monospace; font-size: 14px; }
+  .mode-block h3 { margin: 0 0 4px; font-size: 16px; }
+  .mode-block .mode-name { font-family: ui-monospace, monospace; font-size: 12px; }
   .muted { color: var(--muted); }
   .sugg-row, .prog-row {
     display: flex; gap: 10px; align-items: baseline; padding: 8px 0;
@@ -547,11 +548,21 @@ function renderTaxonomy() {
     root.innerHTML = `<div class="card"><p>No failure modes yet.</p><p class="muted">Modes are groups of notes you have already written. They show up here after axial coding, each with the notes that produced it.</p></div>`;
     return;
   }
-  root.innerHTML = modes.map((mode) => {
-    const notes = state.annotations.filter((a) => (mode.created_from || []).includes(a.id) || (mode.example_trace_ids || []).includes(a.trace_id));
-    const items = notes.map((a) => `<li>${escapeHtml(clip(a.note, 160))}</li>`).join("") || `<li class="muted">no linked notes</li>`;
-    return `<article class="mode-block"><h3>${escapeHtml(mode.name || "")}</h3><p class="muted">${escapeHtml(mode.definition || "")}</p><ul>${items}</ul></article>`;
+  const linked = (mode) => {
+    const ids = mode.created_from || [];
+    if (ids.length) return state.annotations.filter((a) => ids.includes(a.id));
+    return state.annotations.filter((a) => (mode.example_trace_ids || []).includes(a.trace_id));
+  };
+  const blocks = modes.map((mode) => {
+    const items = linked(mode).map((a) => `<li>${escapeHtml(clip(a.note, 160))}</li>`).join("") || `<li class="muted">no linked notes</li>`;
+    const source = mode.requirement_source ? `<p class="muted">${escapeHtml(mode.requirement_source)}</p>` : "";
+    return `<article class="mode-block"><h3>${escapeHtml(mode.title || mode.name || "")}</h3><p class="mode-name muted">${escapeHtml(mode.name || "")} · ${escapeHtml(mode.status || "candidate")}</p><p>${escapeHtml(mode.definition || "")}</p>${source}<ul>${items}</ul></article>`;
   }).join("");
+  const held = state.patterns.ungrouped || [];
+  const heldHtml = held.length
+    ? `<article class="mode-block"><h3>Left ungrouped</h3><p class="muted">Accepted as observations that are not one of the groups above.</p><ul>${held.map((item) => `<li>${escapeHtml(clip(item.note || "", 160))}</li>`).join("")}</ul></article>`
+    : "";
+  root.innerHTML = blocks + heldHtml;
 }
 
 function renderSuggestions() {

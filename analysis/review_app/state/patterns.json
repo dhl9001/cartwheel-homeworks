@@ -1,0 +1,196 @@
+{
+  "accepted_at": "2026-09-22T16:02:00+01:00",
+  "source": "Batch 1 open codes, grouped by whether one product change would fix the notes together. Accepted as proposed. Status is candidate: names, close negatives, and evaluator type are still open.",
+  "modes": [
+    {
+      "name": "narrated_method",
+      "title": "The reply describes its own method",
+      "status": "candidate",
+      "definition": "The reply tells the user which search, tool, or policy it is about to use, or explains an internal system step, instead of only giving the result.",
+      "requirement_source": "Specification gap. RESP-5 asks for direct language and does not forbid describing the next tool.",
+      "created_from": [
+        "a1790085679260",
+        "a1790085698677",
+        "a1790085731804",
+        "a1790085858592",
+        "a1790085958830",
+        "a1790086787528",
+        "a1790086807573",
+        "a1790087127657",
+        "a1790087198022",
+        "a1790085356114",
+        "a1790085418339",
+        "a1790086523114",
+        "a1790084855722",
+        "a1790085283823",
+        "a1790086440544",
+        "a1790086571122"
+      ],
+      "example_trace_ids": [
+        "ef7942dc762a4cac3ec0a0e6297f408f",
+        "e68b6352e51d75a1895b4b5cd38b69e0",
+        "d07519720c50be652085b731ee9c38de",
+        "611f3372d559f8b0616bb68cead9dd9d",
+        "0a17bbaacde4c84c4936b73646a66a2b",
+        "5cce752dfee53b5c649973612a6bd8b2",
+        "54457b2e4a73a69f85f321d47443ac30",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "bd1d6200b2d313aebcf9bd3e2a1f9f7e",
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "b3e1af7cbf217c01d007a28abdd190c1"
+      ]
+    },
+    {
+      "name": "cited_policy_id",
+      "title": "The reply names a policy document id",
+      "status": "candidate",
+      "definition": "The reply includes a policy document identifier such as cw-returns, cw-refunds, cw-escalations, or a store policy id.",
+      "requirement_source": "Pending revision of SPEC.md RESP-1. RESP-1 currently requires citing the policy identifier for every claim taken from a policy document.",
+      "boundary": "Accepting this group means the requirement source is a change to RESP-1. Until that revision is written, these notes are not failures of the spec as it stands.",
+      "created_from": [
+        "a1790084680120",
+        "a1790085259356",
+        "a1790085473729",
+        "a1790085772023",
+        "a1790085775547",
+        "a1790085790340",
+        "a1790085872355",
+        "a1790085878325",
+        "a1790086490598",
+        "a1790086571122",
+        "a1790087119117",
+        "a1790087192726"
+      ],
+      "example_trace_ids": [
+        "345306195e846a24db91b8cb2434cebb",
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "ef7942dc762a4cac3ec0a0e6297f408f",
+        "e68b6352e51d75a1895b4b5cd38b69e0",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "5cce752dfee53b5c649973612a6bd8b2",
+        "54457b2e4a73a69f85f321d47443ac30"
+      ]
+    },
+    {
+      "name": "unasked_facts",
+      "title": "The reply adds facts the user did not ask for",
+      "status": "candidate",
+      "definition": "The reply states a fact, offer, or list the user's message did not ask for.",
+      "requirement_source": "Specification gap. RESP-5 asks for direct language and does not say to answer only the question asked.",
+      "created_from": [
+        "a1790084289463",
+        "a1790084340515",
+        "a1790084439465",
+        "a1790084661503",
+        "a1790085468226",
+        "a1790085283823",
+        "a1790086748902",
+        "a1790086490598",
+        "a1790086571122"
+      ],
+      "example_trace_ids": [
+        "1093caaaa35d7fc33ca668496a68842c",
+        "a0e3934d53f39f808bcce6c297db6903",
+        "345306195e846a24db91b8cb2434cebb",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "fe48b220ba8543b0c2ec08b3ef43ab85",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "6600cf6d048b712a9ad826bd6e5a6bc1"
+      ]
+    },
+    {
+      "name": "unclear_target",
+      "title": "The reply acts before the target is clear",
+      "status": "candidate",
+      "definition": "The user's request does not identify a single order or time window, and the reply picks one, takes an action, or finishes without asking.",
+      "requirement_source": "Specification gap. No current SPEC id requires asking before acting on a likely match or an ambiguous request.",
+      "boundary": "full-038 and full-013 are the edge: the answer was already given, and the note asks for a follow-up question. They stay here because that placement was accepted.",
+      "created_from": [
+        "a1790085225281",
+        "a1790085493464",
+        "a1790086363190",
+        "a1790086440544",
+        "a1790087050526",
+        "a1790087231766",
+        "a1790084394540",
+        "a1790085914320"
+      ],
+      "example_trace_ids": [
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "f1f797f5a80fbf28d1ffe85c9f7d1438",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "9fdabc417dd1386a8cd30b0287b68aa2",
+        "b77bbac37897193d8bf5b1c45896e65a",
+        "d5bbfcd7adcc7075a37437169a704667",
+        "e68b6352e51d75a1895b4b5cd38b69e0"
+      ]
+    },
+    {
+      "name": "unused_tool_call",
+      "title": "A tool call adds nothing the reply needs",
+      "status": "candidate",
+      "definition": "The assistant calls a tool whose result is already known from an earlier tool, or calls a tool the user's request did not need.",
+      "requirement_source": "Specification gap. The tool list does not forbid an extra call.",
+      "boundary": "Can still split into a repeated lookup and a call the user did not need.",
+      "created_from": [
+        "a1790085152749",
+        "a1790085171862",
+        "a1790086547496",
+        "a1790086726995",
+        "a1790086762060"
+      ],
+      "example_trace_ids": [
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "fe48b220ba8543b0c2ec08b3ef43ab85"
+      ]
+    },
+    {
+      "name": "premature_refund_claim",
+      "title": "The reply announces a refund before the tool can finish it",
+      "status": "candidate",
+      "definition": "The reply says it will request or complete a refund before the refund tool reports a completed refund, including when the refund must go to a human.",
+      "requirement_source": "SPEC.md RESP-2",
+      "created_from": [
+        "a1790087452459"
+      ],
+      "example_trace_ids": [
+        "fa40a4e2c246c574daf5f26a3540e371"
+      ]
+    },
+    {
+      "name": "repeated_fact",
+      "title": "The reply repeats something already said",
+      "status": "candidate",
+      "definition": "The reply repeats a fact already stated in the same reply, or repeats work an earlier turn of the session already covered.",
+      "requirement_source": "Specification gap. No current SPEC id forbids repetition.",
+      "created_from": [
+        "a1790086618995",
+        "a1790085620620"
+      ],
+      "example_trace_ids": [
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "832ef0bc48989a9e9c047feaa9dcea19"
+      ]
+    }
+  ],
+  "ungrouped": [
+    {
+      "id": "a1790084455336",
+      "scenario_id": "full-020",
+      "note": "Format in a more user friendly way",
+      "reason": "One note about a table. RESP-5 does not specify layout. It becomes a mode only if that formatting requirement is written down."
+    },
+    {
+      "id": "a1790087169995",
+      "scenario_id": "full-099",
+      "note": "Talking to support, so shouldn't open another ticket. Should ask the user what to do first since it is already marked as refunded.",
+      "reason": "Different product change from asking before an unclear shopper target: a support user should not open another ticket."
+    }
+  ]
+}
