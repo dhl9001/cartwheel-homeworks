@@ -1,0 +1,186 @@
+{
+  "batch": 1,
+  "seed": 7,
+  "picks": [
+    {
+      "trace_id": "d5bbfcd7adcc7075a37437169a704667",
+      "scenario_id": "full-038",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "a0e3934d53f39f808bcce6c297db6903",
+      "scenario_id": "full-020",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "345306195e846a24db91b8cb2434cebb",
+      "scenario_id": "full-046",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "bd1d6200b2d313aebcf9bd3e2a1f9f7e",
+      "scenario_id": "full-077",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "bc7f60adb548264354fd1ebc0b7d31c3",
+      "scenario_id": "full-007",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "02c6c7a3bde3a1e8564940e881551852",
+      "scenario_id": "full-010",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "8dac88f3730927d1f3236d2a7af55fa7",
+      "scenario_id": "full-094",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "8170f9e0a9ef2a7ac7e8971524b0ed4f",
+      "scenario_id": "full-063",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "e68b6352e51d75a1895b4b5cd38b69e0",
+      "scenario_id": "full-013",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "d07519720c50be652085b731ee9c38de",
+      "scenario_id": "full-042",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "64bce9e854e415f2f466bd462cf63056",
+      "scenario_id": "full-069",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "f1f797f5a80fbf28d1ffe85c9f7d1438",
+      "scenario_id": "full-008",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "77fb8d770a59f030ff7ca4246e0c4d1c",
+      "scenario_id": "full-100",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "6600cf6d048b712a9ad826bd6e5a6bc1",
+      "scenario_id": "full-060",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "fe48b220ba8543b0c2ec08b3ef43ab85",
+      "scenario_id": "full-028",
+      "reason": "uniform sample",
+      "batch": "uniform"
+    },
+    {
+      "trace_id": "0a17bbaacde4c84c4936b73646a66a2b",
+      "reason": "cluster 0 representative",
+      "batch": "cluster",
+      "scenario_id": "full-036"
+    },
+    {
+      "trace_id": "9fdabc417dd1386a8cd30b0287b68aa2",
+      "reason": "cluster 1 representative",
+      "batch": "cluster",
+      "scenario_id": "full-049"
+    },
+    {
+      "trace_id": "b12b789e3238d7a9f9cd7da7663ed163",
+      "reason": "cluster 2 representative",
+      "batch": "cluster",
+      "scenario_id": "full-080"
+    },
+    {
+      "trace_id": "1430ef5661cbcf86a12f916858282291",
+      "reason": "cluster 3 representative",
+      "batch": "cluster",
+      "scenario_id": "full-095"
+    },
+    {
+      "trace_id": "b3e1af7cbf217c01d007a28abdd190c1",
+      "reason": "cluster 4 representative",
+      "batch": "cluster",
+      "scenario_id": "full-100"
+    },
+    {
+      "trace_id": "5cce752dfee53b5c649973612a6bd8b2",
+      "reason": "cluster 5 representative",
+      "batch": "cluster",
+      "scenario_id": "full-062"
+    },
+    {
+      "trace_id": "75a1affa64cc74144ae2c376279866f0",
+      "reason": "cluster 6 representative",
+      "batch": "cluster",
+      "scenario_id": "full-099"
+    },
+    {
+      "trace_id": "54457b2e4a73a69f85f321d47443ac30",
+      "reason": "cluster 7 representative",
+      "batch": "cluster",
+      "scenario_id": "full-029"
+    },
+    {
+      "trace_id": "78934c82053072e5efb3418bd05e5988",
+      "reason": "cluster 0 representative",
+      "batch": "cluster",
+      "scenario_id": "full-027"
+    },
+    {
+      "trace_id": "b77bbac37897193d8bf5b1c45896e65a",
+      "reason": "cluster 1 representative",
+      "batch": "cluster",
+      "scenario_id": "full-025"
+    },
+    {
+      "trace_id": "c1567cfaf2bf6538d06936d1e9395b2d",
+      "reason": "cluster 2 representative",
+      "batch": "cluster",
+      "scenario_id": "full-037"
+    },
+    {
+      "trace_id": "281aa65c1aeab2250971bab924ca398f",
+      "reason": "cluster 3 representative",
+      "batch": "cluster",
+      "scenario_id": "full-097"
+    },
+    {
+      "trace_id": "4435c13c0311d3b46bbae4f7d32024c9",
+      "reason": "cluster 4 representative",
+      "batch": "cluster",
+      "scenario_id": "full-098"
+    },
+    {
+      "trace_id": "d8590b79bfc7dcd7d277778d1c41b7ea",
+      "reason": "cluster 5 representative",
+      "batch": "cluster",
+      "scenario_id": "full-070"
+    },
+    {
+      "trace_id": "33017693f6f8e7b73d69c2f9388a0ebe",
+      "reason": "cluster 6 representative",
+      "batch": "cluster",
+      "scenario_id": "full-051"
+    }
+  ]
+}

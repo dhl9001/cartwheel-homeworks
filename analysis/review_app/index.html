@@ -47,7 +47,7 @@
   header.app h1 { font-size: 15px; margin: 0; font-weight: 700; }
   header.app h1 .dim { color: var(--muted); font-weight: 400; }
   .views { display: flex; gap: 4px; }
-  .views button, .nav button, .jump button, .queue-tools button, .mnote button {
+  .views button, .nav button, .jump button, .queue-tools button, .mnote button, .no-fail {
     border: 1px solid var(--line); background: var(--bg);
     border-radius: 6px; cursor: pointer; font: inherit;
   }
@@ -103,6 +103,14 @@
   .msg.assistant { border-left-color: var(--role-assistant); }
   .msg.assistant .role { color: var(--role-assistant); }
   .text { white-space: pre-wrap; word-wrap: break-word; }
+  .text strong { font-weight: 700; }
+  .text code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+  .turn.focus { box-shadow: inset 0 0 0 2px #1a1a1a; }
+  .flag {
+    font-size: 11px; background: #fef3c7; color: #92400e;
+    padding: 2px 7px; border-radius: 10px; margin-left: 8px;
+  }
+  .no-fail { margin-left: 8px; font-size: 12px; padding: 2px 8px; }
   .tool-group { border-left: 4px solid var(--role-tool); }
   .tool { padding: 8px 14px; }
   .tool + .tool { border-top: 1px solid var(--line); }
@@ -214,6 +222,9 @@
 <script>
 const state = {
   sessions: [],
+  queue: [],
+  qi: 0,
+  focusTrace: null,
   annotations: [],
   suggestions: [],
   patterns: {modes: []},
@@ -228,6 +239,11 @@ function escapeHtml(value) {
 function pretty(value) {
   if (typeof value === "string") return value;
   return JSON.stringify(value, null, 2);
+}
+function renderInline(text) {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([\s\S]+?)\*\*/g, "<strong>$1</strong>");
 }
 function clip(text, n) {
   text = String(text || "");
@@ -249,6 +265,7 @@ async function loadAll() {
     fetch("/api/patterns").then((r) => r.json()),
   ]);
   state.sessions = sessions.sessions || [];
+  state.queue = sessions.queue || [];
   state.annotations = Array.isArray(annotations) ? annotations : [];
   state.suggestions = Array.isArray(suggestions) ? suggestions : [];
   state.patterns = patterns && Array.isArray(patterns.modes) ? patterns : {modes: []};
@@ -266,24 +283,36 @@ function notesFor(traceId) {
   return [...human, ...sugg];
 }
 
+function covers(traceId) {
+  return state.annotations.some((a) => a.trace_id === traceId || a.for_trace === traceId);
+}
+
+function queueItem() {
+  return state.queue[state.qi] || null;
+}
+
 function renderChrome() {
   const session = current();
   const pos = document.getElementById("pos");
-  pos.textContent = state.sessions.length ? `${state.cur + 1} / ${state.sessions.length}` : "0 / 0";
-  const noted = new Set(state.annotations.map((a) => a.trace_id));
-  const reviewed = state.sessions.filter((s) => s.turns.some((t) => noted.has(t.trace_id))).length;
+  pos.textContent = state.queue.length ? `${state.qi + 1} / ${state.queue.length}` : "0 / 0";
+  const reviewed = state.queue.filter((item) => covers(item.trace_id)).length;
   document.getElementById("counts").textContent =
-    `${reviewed} / ${state.sessions.length} sessions noted`;
+    `${reviewed} / ${state.queue.length} batch 1 traces noted`;
   const head = document.getElementById("session-head");
   if (!session) {
     head.innerHTML = '<span class="meta">no sessions</span>';
     return;
   }
+  const focus = queueItem();
+  const batch = focus && session.turns.some((turn) => turn.trace_id === focus.trace_id)
+    ? `<span class="flag">batch 1 · ${escapeHtml(focus.reason)}</span>`
+    : "";
   head.innerHTML =
     `<span class="scenario">${escapeHtml(session.scenario_id)}</span>` +
     `<span class="meta">role ${escapeHtml(session.role)}</span>` +
     `<span class="meta">user ${escapeHtml(session.user_id)}</span>` +
-    `<span class="meta">${session.turns.length} turn${session.turns.length === 1 ? "" : "s"}</span>`;
+    `<span class="meta">${session.turns.length} turn${session.turns.length === 1 ? "" : "s"}</span>` +
+    batch;
 }
 
 function renderSystem() {
@@ -296,8 +325,9 @@ function renderSystem() {
   box.innerHTML = `<summary>System prompt, same text on every turn</summary><pre>${escapeHtml(prompt)}</pre>`;
 }
 
-function annotatable(traceId, text) {
-  return `<div class="text annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(text)}</div>`;
+function annotatable(traceId, text, markdown) {
+  const body = markdown ? renderInline(text) : escapeHtml(text);
+  return `<div class="text annotatable" data-trace-id="${escapeHtml(traceId)}">${body}</div>`;
 }
 
 function renderTool(traceId, tool) {
@@ -319,7 +349,7 @@ function renderSteps(traceId, steps) {
       ? `<div class="decided">then ${(step.tools || []).map(escapeHtml).join(", ")}</div>`
       : "";
     const text = step.text
-      ? annotatable(traceId, step.text)
+      ? annotatable(traceId, step.text, true)
       : `<div class="muted">no plain-text reasoning on this call</div>`;
     return `<li>${text}${decided}</li>`;
   }).join("");
@@ -336,41 +366,92 @@ function renderSession() {
     const tools = (turn.tools || []).map((tool) => renderTool(turn.trace_id, tool)).join("");
     const toolBlock = tools ? `<div class="tool-group">${tools}</div>` : "";
     const shortId = String(turn.trace_id).slice(0, 8);
-    return `<section class="turn">` +
-      `<div class="turn-meta">Turn ${index + 1} · ${escapeHtml(shortId)}</div>` +
-      `<div class="msg user"><div class="role">User</div>${annotatable(turn.trace_id, turn.user_text)}</div>` +
+    const focused = turn.trace_id === state.focusTrace;
+    const already = covers(turn.trace_id);
+    const noFail = focused
+      ? `<button type="button" class="no-fail" data-trace="${escapeHtml(turn.trace_id)}" ${already ? "disabled" : ""}>No failure observed</button>`
+      : "";
+    return `<section class="turn${focused ? " focus" : ""}" id="turn-${escapeHtml(turn.trace_id)}">` +
+      `<div class="turn-meta">Turn ${index + 1} · ${escapeHtml(shortId)}${noFail}</div>` +
+      `<div class="msg user"><div class="role">User</div>${annotatable(turn.trace_id, turn.user_text, true)}</div>` +
       toolBlock +
-      `<div class="msg assistant"><div class="role">Assistant</div>${annotatable(turn.trace_id, turn.assistant_text)}</div>` +
+      `<div class="msg assistant"><div class="role">Assistant</div>${annotatable(turn.trace_id, turn.assistant_text, true)}</div>` +
       renderSteps(turn.trace_id, turn.model_steps || []) +
       `</section>`;
   }).join("");
   applyHighlights();
   layoutMargin();
+  body.querySelectorAll(".no-fail").forEach((btn) => {
+    btn.onclick = () => markNoFailure(btn.dataset.trace);
+  });
+}
+
+function collectText(el) {
+  const nodes = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let node;
+  let full = "";
+  while ((node = walker.nextNode())) {
+    nodes.push({node, start: full.length});
+    full += node.textContent;
+  }
+  return {nodes, full};
+}
+
+function wrapQuote(el, start, end, className, itemId) {
+  const {nodes} = collectText(el);
+  let startNode = null;
+  let startOff = 0;
+  let endNode = null;
+  let endOff = 0;
+  nodes.forEach((entry) => {
+    const nodeEnd = entry.start + entry.node.textContent.length;
+    if (!startNode && start >= entry.start && start <= nodeEnd) {
+      startNode = entry.node;
+      startOff = start - entry.start;
+    }
+    if (end >= entry.start && end <= nodeEnd) {
+      endNode = entry.node;
+      endOff = end - entry.start;
+    }
+  });
+  if (!startNode || !endNode) return;
+  const range = document.createRange();
+  range.setStart(startNode, startOff);
+  range.setEnd(endNode, endOff);
+  const span = document.createElement("span");
+  span.className = className;
+  span.dataset.item = itemId;
+  try {
+    range.surroundContents(span);
+  } catch (err) {
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+  }
 }
 
 function applyHighlights() {
   document.querySelectorAll(".annotatable").forEach((el) => {
-    const traceId = el.dataset.traceId;
-    const text = el.textContent;
-    const ranges = [];
-    notesFor(traceId).forEach((item) => {
+    const full = el.textContent;
+    const found = [];
+    notesFor(el.dataset.traceId).forEach((item) => {
       if (!item.quote) return;
-      const pos = text.indexOf(item.quote);
-      if (pos >= 0) ranges.push([pos, pos + item.quote.length, item]);
+      const pos = full.indexOf(item.quote);
+      if (pos >= 0) found.push([pos, pos + item.quote.length, item]);
     });
-    if (!ranges.length) return;
-    ranges.sort((a, b) => a[0] - b[0]);
-    let out = "";
+    found.sort((a, b) => a[0] - b[0]);
+    const kept = [];
     let cursor = 0;
-    ranges.forEach(([start, end, item]) => {
-      if (start < cursor) return;
-      out += escapeHtml(text.slice(cursor, start));
-      const cls = item.kind === "sugg" ? "hl sugg" : "hl";
-      out += `<span class="${cls}" data-item="${escapeHtml(item.id)}">${escapeHtml(text.slice(start, end))}</span>`;
-      cursor = end;
+    found.forEach((range) => {
+      if (range[0] < cursor) return;
+      kept.push(range);
+      cursor = range[1];
     });
-    out += escapeHtml(text.slice(cursor));
-    el.innerHTML = out;
+    kept.sort((a, b) => b[0] - a[0]);
+    kept.forEach(([start, end, item]) => {
+      const cls = item.kind === "sugg" ? "hl sugg" : "hl";
+      wrapQuote(el, start, end, cls, item.id);
+    });
   });
 }
 
@@ -450,21 +531,31 @@ function renderSuggestions() {
   root.querySelectorAll("[data-reject]").forEach((btn) => { btn.onclick = () => rejectSuggestion(btn.dataset.reject); });
 }
 
+function openQueue(index) {
+  const item = state.queue[index];
+  if (!item) return;
+  state.qi = index;
+  state.focusTrace = item.trace_id;
+  const sessionIndex = state.sessions.findIndex((session) =>
+    session.turns.some((turn) => turn.trace_id === item.trace_id));
+  if (sessionIndex >= 0) state.cur = sessionIndex;
+  showView("session");
+  const node = document.getElementById("turn-" + item.trace_id);
+  if (node) node.scrollIntoView({block: "start"});
+}
+
 function renderProgress() {
   const root = document.getElementById("progress");
-  const noted = new Set(state.annotations.map((a) => a.trace_id));
-  const rows = state.sessions.map((session, index) => {
-    const done = session.turns.some((turn) => noted.has(turn.trace_id));
-    const mark = done ? `<span class="done">noted</span>` : `<span class="muted">unread</span>`;
-    return `<div class="prog-row" data-index="${index}"><span class="mono">${escapeHtml(session.scenario_id)}</span><span>${escapeHtml(session.role)}</span><span>${session.turns.length} turns</span>${mark}</div>`;
+  const rows = state.queue.map((item, index) => {
+    const mark = covers(item.trace_id)
+      ? `<span class="done">noted</span>`
+      : `<span class="muted">unread</span>`;
+    return `<div class="prog-row" data-index="${index}"><span class="mono">${escapeHtml(item.scenario_id)}</span><span>${escapeHtml(item.reason)}</span>${mark}</div>`;
   }).join("");
-  const reviewed = state.sessions.filter((s) => s.turns.some((t) => noted.has(t.trace_id))).length;
-  root.innerHTML = `<div class="card"><h2>Progress</h2><p>${reviewed} of ${state.sessions.length} sessions have a note. A session with no note is still unread.</p>${rows}</div>`;
+  const reviewed = state.queue.filter((item) => covers(item.trace_id)).length;
+  root.innerHTML = `<div class="card"><h2>Batch 1</h2><p>${reviewed} of ${state.queue.length} traces have a note. Fifteen are a uniform sample. Fifteen are cluster representatives. A trace with no note is still unread.</p>${rows}</div>`;
   root.querySelectorAll(".prog-row").forEach((row) => {
-    row.onclick = () => {
-      state.cur = Number(row.dataset.index);
-      showView("session");
-    };
+    row.onclick = () => openQueue(Number(row.dataset.index));
   });
 }
 
@@ -499,10 +590,14 @@ document.getElementById("trace-body").addEventListener("mouseup", () => {
     : null;
   if (!anchor) return;
   const range = sel.getRangeAt(0);
+  if (!anchor.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== anchor) return;
   const span = document.createElement("span");
   span.className = "hl pending-highlight";
   try { range.surroundContents(span); }
-  catch (err) { return; }
+  catch (err) {
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+  }
   pending = {trace_id: anchor.dataset.traceId, quote: text, span};
   sel.removeAllRanges();
   const rect = span.getBoundingClientRect();
@@ -532,17 +627,38 @@ document.addEventListener("mousedown", (event) => {
   }
 });
 
+async function markNoFailure(traceId) {
+  if (state.annotations.some((a) => a.trace_id === traceId || a.for_trace === traceId)) return;
+  const item = state.queue.find((entry) => entry.trace_id === traceId);
+  state.annotations.push({
+    id: "a" + Date.now(),
+    trace_id: traceId,
+    for_trace: traceId,
+    quote: "",
+    note: "no failure observed",
+    ts: new Date().toISOString(),
+    author: "human",
+    batch: item ? item.batch : "",
+  });
+  await save("/api/annotations", state.annotations);
+  renderSession();
+  toast("recorded: no failure observed");
+}
+
 async function commitAnnotation() {
   const note = document.getElementById("note-input").value.trim();
   const ctx = pending;
   if (!note || !ctx) { closePopover(); renderSession(); return; }
+  const item = state.queue.find((entry) => entry.trace_id === ctx.trace_id);
   state.annotations.push({
     id: "a" + Date.now(),
     trace_id: ctx.trace_id,
+    for_trace: state.focusTrace || ctx.trace_id,
     quote: ctx.quote,
     note,
     ts: new Date().toISOString(),
     author: "human",
+    batch: item ? item.batch : "",
   });
   closePopover();
   await save("/api/annotations", state.annotations);
@@ -588,29 +704,38 @@ document.querySelectorAll(".views button").forEach((btn) => {
   btn.onclick = () => showView(btn.dataset.view);
 });
 document.getElementById("prev").onclick = () => {
-  if (state.cur > 0) { state.cur -= 1; renderSession(); window.scrollTo(0, 0); }
+  if (state.qi > 0) openQueue(state.qi - 1);
 };
 document.getElementById("next").onclick = () => {
-  if (state.cur < state.sessions.length - 1) { state.cur += 1; renderSession(); window.scrollTo(0, 0); }
+  if (state.qi < state.queue.length - 1) openQueue(state.qi + 1);
 };
 document.getElementById("jump").onsubmit = (event) => {
   event.preventDefault();
   const query = document.getElementById("scenario-input").value.trim();
+  const queueIndex = state.queue.findIndex((item) => item.scenario_id === query);
+  if (queueIndex >= 0) { openQueue(queueIndex); return; }
   const index = state.sessions.findIndex((s) => s.scenario_id === query);
   if (index < 0) { toast("no session " + query); return; }
   state.cur = index;
+  state.focusTrace = null;
   showView("session");
-  window.scrollTo(0, 0);
 };
 
 loadAll().then(() => {
   const params = new URLSearchParams(location.search);
   const scenario = params.get("scenario");
   if (scenario) {
-    const index = state.sessions.findIndex((s) => s.scenario_id === scenario);
-    if (index >= 0) state.cur = index;
+    const queueIndex = state.queue.findIndex((item) => item.scenario_id === scenario);
+    if (queueIndex >= 0) openQueue(queueIndex);
+    else {
+      const index = state.sessions.findIndex((s) => s.scenario_id === scenario);
+      if (index >= 0) state.cur = index;
+      renderSession();
+    }
+    return;
   }
-  renderSession();
+  if (state.queue.length) openQueue(0);
+  else renderSession();
 }).catch((err) => {
   document.getElementById("trace-body").textContent = String(err);
 });

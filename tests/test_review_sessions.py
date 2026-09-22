@@ -180,3 +180,18 @@ def test_real_export_sessions_match_the_review_set() -> None:
         "order 1894 · placed · Paper Lantern Press",
         "order 1894 → cancelled",
     ]
+
+
+def test_first_batch_is_thirty_distinct_traces() -> None:
+    from analysis.review_app.batch import first_reading_batch, traces_from_sessions
+
+    export_path = Path(__file__).resolve().parents[1] / "traces" / "support_traces.json"
+    export = json.loads(export_path.read_text())
+    picks = first_reading_batch(traces_from_sessions(build_sessions(export)))
+    ids = [pick["trace_id"] for pick in picks]
+    assert len(ids) == 30
+    assert len(set(ids)) == 30
+    assert [pick["batch"] for pick in picks].count("uniform") == 15
+    assert [pick["batch"] for pick in picks].count("cluster") == 15
+    assert picks[0]["reason"] == "uniform sample"
+    assert picks[15]["reason"].startswith("cluster ")
