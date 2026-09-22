@@ -275,3 +275,23 @@ def test_stability_batch_is_fifteen_unseen_traces() -> None:
     assert {pick["reason"] for pick in picks} == {"uniform sample"}
     assert {pick["review_batch"] for pick in picks} == {"4"}
     assert len(reviewed) + len(ids) == 100
+
+
+def test_label_flip_keeps_the_old_judgment() -> None:
+    import tempfile
+    from pathlib import Path
+
+    from analysis.review_app.server import live_labels, record_label
+
+    with tempfile.TemporaryDirectory() as directory:
+        folder = Path(directory)
+        first = record_label(folder, "narrated_method", "trace-a", 1)
+        second = record_label(folder, "narrated_method", "trace-a", 0)
+        rows = (folder / "narrated_method.jsonl").read_text().strip().splitlines()
+        assert len(rows) == 2
+        assert json.loads(rows[0])["superseded_by"] == second["label_id"]
+        live = live_labels(folder)
+        assert live == [second]
+        assert first["label"] == 1
+        again = record_label(folder, "narrated_method", "trace-a", 0)
+        assert again["label_id"] == second["label_id"]

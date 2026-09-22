@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,78 @@ API_DEFAULTS: dict[str, Any] = {
     "/api/suggestions": [],
     "/api/patterns": {"modes": []},
 }
+LABELS_DIR = STATE_DIR / "labels"
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text().splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
+def live_labels(directory: Path) -> list[dict[str, Any]]:
+    """Return the current label for each trace and mode.
+
+    A flipped label appends a new line and marks the old one superseded.
+    """
+    labels: list[dict[str, Any]] = []
+    if not directory.exists():
+        return labels
+    for path in sorted(directory.glob("*.jsonl")):
+        live: dict[str, dict[str, Any]] = {}
+        for row in _read_jsonl(path):
+            if row.get("superseded_by"):
+                continue
+            live[str(row.get("trace_id"))] = row
+        labels.extend(live.values())
+    return labels
+
+
+def record_label(directory: Path, mode: str, trace_id: str, label: int) -> dict[str, Any]:
+    """Append one present (1) or absent (0) judgment. Same value is a no-op."""
+    if label not in (0, 1):
+        raise ValueError("label must be 0 or 1")
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{mode}.jsonl"
+    rows = _read_jsonl(path)
+    prior = [row for row in rows if row.get("trace_id") == trace_id and not row.get("superseded_by")]
+    if prior and prior[-1].get("label") == label:
+        return prior[-1]
+    new_id = f"{trace_id}#{sum(1 for row in rows if row.get('trace_id') == trace_id)}"
+    if prior:
+        prior[-1]["superseded_by"] = new_id
+    record = {
+        "trace_id": trace_id,
+        "mode": mode,
+        "label": label,
+        "source": "human",
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "label_id": new_id,
+    }
+    rows.append(record)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    return record
+
+
+def _mode_names() -> set[str]:
+    patterns = _read_json(STATE_DIR / "patterns.json", {"modes": []})
+    return {
+        str(mode.get("name"))
+        for mode in patterns.get("modes") or []
+        if isinstance(mode, dict) and mode.get("name")
+    }
+
+
+def _reviewed_ids(app: ReviewApp) -> set[str]:
+    return {
+        pick["trace_id"]
+        for batch in app.batches
+        for pick in batch.get("picks") or []
+    }
 
 
 def _read_json(path: Path, default: Any) -> Any:
@@ -126,6 +199,9 @@ def make_handler(app: ReviewApp) -> type[BaseHTTPRequestHandler]:
                     }
                 )
                 return
+            if path == "/api/labels":
+                self._send_json({"labels": live_labels(LABELS_DIR)})
+                return
             if path in API_FILES:
                 self._send_json(_read_json(API_FILES[path], API_DEFAULTS[path]))
                 return
@@ -133,6 +209,31 @@ def make_handler(app: ReviewApp) -> type[BaseHTTPRequestHandler]:
 
         def do_POST(self) -> None:  # noqa: N802
             path = self.path.split("?", 1)[0]
+            if path == "/api/labels":
+                data = self._read_body()
+                if not isinstance(data, dict):
+                    self._send_json({"error": "expected a JSON object"}, status=400)
+                    return
+                mode = str(data.get("mode") or "")
+                trace_id = str(data.get("trace_id") or "")
+                try:
+                    label = int(data.get("label"))
+                except (TypeError, ValueError):
+                    self._send_json({"error": "label must be 0 or 1"}, status=400)
+                    return
+                if mode not in _mode_names():
+                    self._send_json({"error": f"unknown mode: {mode}"}, status=400)
+                    return
+                if trace_id not in _reviewed_ids(app):
+                    self._send_json({"error": "trace is not in the review set"}, status=400)
+                    return
+                try:
+                    record = record_label(LABELS_DIR, mode, trace_id, label)
+                except ValueError as exc:
+                    self._send_json({"error": str(exc)}, status=400)
+                    return
+                self._send_json({"ok": True, "label": record})
+                return
             if path not in API_FILES:
                 self._send_json({"error": f"cannot POST to {path}"}, status=404)
                 return

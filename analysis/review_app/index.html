@@ -168,7 +168,12 @@
   }
   .mode-block h3 { margin: 0 0 4px; font-size: 16px; }
   .mode-block .mode-name { font-family: ui-monospace, monospace; font-size: 12px; }
-  .muted { color: var(--muted); }
+  .choice.on { background: #1a1a1a; color: #fff; }
+  .label-row {
+    display: flex; gap: 12px; align-items: center; padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .label-row .name { flex: 1; }
   .sugg-row, .prog-row {
     display: flex; gap: 10px; align-items: baseline; padding: 8px 0;
     border-top: 1px solid var(--line); font-size: 13px;
@@ -194,6 +199,7 @@
     <button data-view="taxonomy">Taxonomy</button>
     <button data-view="suggestions">Suggestions</button>
     <button data-view="progress">Progress</button>
+    <button data-view="labels">Labels</button>
   </div>
   <div class="spacer"></div>
   <form class="jump" id="jump">
@@ -220,6 +226,7 @@
 <div id="taxonomy-view" class="view"><div class="panel" id="taxonomy"></div></div>
 <div id="suggestions-view" class="view"><div class="panel" id="suggestions"></div></div>
 <div id="progress-view" class="view"><div class="panel" id="progress"></div></div>
+<div id="labels-view" class="view"><div class="panel" id="labels"></div></div>
 
 <div id="popover">
   <input id="note-input" placeholder="what went wrong? (Enter to save)" />
@@ -238,6 +245,8 @@ const state = {
   annotations: [],
   suggestions: [],
   patterns: {modes: []},
+  labels: [],
+  labelCursor: 0,
   cur: 0,
 };
 
@@ -268,11 +277,12 @@ function toast(message) {
 }
 
 async function loadAll() {
-  const [sessions, annotations, suggestions, patterns] = await Promise.all([
+  const [sessions, annotations, suggestions, patterns, labels] = await Promise.all([
     fetch("/api/sessions").then((r) => r.json()),
     fetch("/api/annotations").then((r) => r.json()),
     fetch("/api/suggestions").then((r) => r.json()),
     fetch("/api/patterns").then((r) => r.json()),
+    fetch("/api/labels").then((r) => r.json()),
   ]);
   state.sessions = sessions.sessions || [];
   state.queue = sessions.queue || [];
@@ -281,6 +291,7 @@ async function loadAll() {
   state.annotations = Array.isArray(annotations) ? annotations : [];
   state.suggestions = Array.isArray(suggestions) ? suggestions : [];
   state.patterns = patterns && Array.isArray(patterns.modes) ? patterns : {modes: []};
+  state.labels = Array.isArray(labels.labels) ? labels.labels : [];
 }
 
 function current() { return state.sessions[state.cur]; }
@@ -643,6 +654,96 @@ function renderProgress() {
   });
 }
 
+function reviewedPicks() {
+  const seen = new Set();
+  const picks = [];
+  for (const batch of state.batches || []) {
+    for (const pick of batch.picks || []) {
+      if (seen.has(pick.trace_id)) continue;
+      seen.add(pick.trace_id);
+      picks.push(pick);
+    }
+  }
+  return picks;
+}
+
+function labelFor(traceId, mode) {
+  return state.labels.find((row) => row.trace_id === traceId && row.mode === mode) || null;
+}
+
+function noteDefaults() {
+  const pairs = [];
+  for (const mode of state.patterns.modes || []) {
+    for (const id of mode.created_from || []) {
+      const note = state.annotations.find((item) => item.id === id);
+      if (note) pairs.push({trace_id: note.trace_id, mode: mode.name, label: 1});
+    }
+    for (const item of mode.close_negatives || []) {
+      if (item.trace_id) pairs.push({trace_id: item.trace_id, mode: mode.name, label: 0});
+    }
+  }
+  return pairs;
+}
+
+async function setLabel(traceId, mode, label) {
+  const response = await fetch("/api/labels", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({trace_id: traceId, mode, label}),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || "save failed");
+  state.labels = state.labels.filter((row) => !(row.trace_id === traceId && row.mode === mode));
+  state.labels.push(body.label);
+}
+
+function renderLabels() {
+  const root = document.getElementById("labels");
+  const picks = reviewedPicks();
+  const modes = state.patterns.modes || [];
+  const total = picks.length * modes.length;
+  const decided = picks.reduce((sum, pick) => (
+    sum + modes.filter((mode) => labelFor(pick.trace_id, mode.name)).length
+  ), 0);
+  if (!picks.length || !modes.length) {
+    root.innerHTML = `<div class="card"><p>No review set to label.</p></div>`;
+    return;
+  }
+  const pick = picks[Math.min(state.labelCursor, picks.length - 1)];
+  const notes = state.annotations.filter((item) => item.trace_id === pick.trace_id || item.for_trace === pick.trace_id);
+  const noteHtml = notes.length
+    ? `<ul>${notes.map((item) => `<li>${escapeHtml(clip(item.note, 180))}</li>`).join("")}</ul>`
+    : `<p class="muted">No note on this trace.</p>`;
+  const rows = modes.map((mode) => {
+    const saved = labelFor(pick.trace_id, mode.name);
+    const presentOn = saved && saved.label === 1 ? " on" : "";
+    const absentOn = saved && saved.label === 0 ? " on" : "";
+    return `<div class="label-row"><div class="name"><strong>${escapeHtml(mode.title || mode.name)}</strong><div class="muted">${escapeHtml(mode.definition || "")}</div></div><button type="button" class="choice${presentOn}" data-label="1" data-mode="${escapeHtml(mode.name)}">Present</button><button type="button" class="choice${absentOn}" data-label="0" data-mode="${escapeHtml(mode.name)}">Absent</button></div>`;
+  }).join("");
+  root.innerHTML = `<div class="card"><h2>${escapeHtml(pick.scenario_id)}</h2><p class="muted">batch ${escapeHtml(pick.review_batch || "")} · ${escapeHtml(pick.reason || "")}</p><p>${decided} / ${total} judgments saved. A blank pair is still undecided. Present means this candidate's failure is in the trace.</p><p><button type="button" id="label-prev">Previous</button> <button type="button" id="label-next">Next</button> <button type="button" id="label-open">Open trace</button> <button type="button" id="label-notes">Save judgments from your notes</button></p>${noteHtml}${rows}</div>`;
+  root.querySelector("#label-prev").onclick = () => {
+    state.labelCursor = Math.max(0, state.labelCursor - 1);
+    renderLabels();
+  };
+  root.querySelector("#label-next").onclick = () => {
+    state.labelCursor = Math.min(picks.length - 1, state.labelCursor + 1);
+    renderLabels();
+  };
+  root.querySelector("#label-open").onclick = () => showPick(pick, null);
+  root.querySelector("#label-notes").onclick = async () => {
+    const pending = noteDefaults().filter((pair) => !labelFor(pair.trace_id, pair.mode));
+    for (const pair of pending) await setLabel(pair.trace_id, pair.mode, pair.label);
+    toast(`saved ${pending.length} judgments from your notes`);
+    renderLabels();
+  };
+  root.querySelectorAll(".choice").forEach((btn) => {
+    btn.onclick = async () => {
+      await setLabel(pick.trace_id, btn.dataset.mode, Number(btn.dataset.label));
+      renderLabels();
+    };
+  });
+}
+
 function showView(name) {
   document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === name + "-view"));
   document.querySelectorAll(".views button").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === name));
@@ -651,6 +752,7 @@ function showView(name) {
   if (name === "taxonomy") renderTaxonomy();
   if (name === "suggestions") renderSuggestions();
   if (name === "progress") renderProgress();
+  if (name === "labels") renderLabels();
 }
 
 async function save(path, body) {
