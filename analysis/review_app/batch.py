@@ -301,3 +301,31 @@ def refund_search_batch(
     picks.extend(_refund_pick(trace, "user asked about a refund") for trace in asked)
     picks.extend(_refund_pick(trace, "refund mentioned, no action words") for trace in boundary)
     return picks
+
+
+def uniform_stability_batch(
+    traces: list[dict[str, Any]],
+    exclude_ids: set[str],
+    k: int = 15,
+    seed: int = 7,
+) -> list[dict[str, str]]:
+    """15 uniform traces from whatever the earlier batches did not use.
+
+    This is the stability check after a taxonomy draft. The draw does not
+    prefer traces that look like a known failure.
+    """
+    excluded = set(exclude_ids)
+    pool = [trace for trace in traces if trace.get("id") not in excluded]
+    if len(pool) < k:
+        raise ValueError(f"need {k} unread traces, found {len(pool)}")
+    chosen = random.Random(seed).sample(pool, k)
+    return [
+        {
+            "trace_id": trace["id"],
+            "scenario_id": _scenario(trace),
+            "reason": "uniform sample",
+            "batch": "uniform",
+            "review_batch": "4",
+        }
+        for trace in chosen
+    ]

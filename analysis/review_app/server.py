@@ -26,6 +26,7 @@ from analysis.review_app.batch import (
     refund_search_batch,
     role_reading_batch,
     traces_from_sessions,
+    uniform_stability_batch,
 )
 from analysis.review_app.sessions import build_sessions
 STATE_DIR = HERE / "state"
@@ -159,6 +160,8 @@ def main() -> None:
     batch2 = role_reading_batch(traces, {pick["trace_id"] for pick in batch1})
     reviewed = {pick["trace_id"] for pick in batch1} | {pick["trace_id"] for pick in batch2}
     batch3 = refund_search_batch(traces, reviewed)
+    reviewed |= {pick["trace_id"] for pick in batch3}
+    batch4 = uniform_stability_batch(traces, reviewed)
     batches = [
         {
             "number": 1,
@@ -175,13 +178,18 @@ def main() -> None:
             "detail": "Depth search for premature_refund_claim: issue_refund calls, refund-action replies, and refund mentions with no action words. The filter is not a label.",
             "picks": batch3,
         },
+        {
+            "number": 4,
+            "detail": "Fifteen more uniform traces, after the taxonomy draft, to see whether a new consequential failure still appears.",
+            "picks": batch4,
+        },
     ]
     _write_json(STATE_DIR / "sample_manifest.json", {"seed": 7, "batches": batches})
-    app = ReviewApp(sessions, batch3, batches, queue_batch=3)
+    app = ReviewApp(sessions, batch4, batches, queue_batch=4)
     server = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     turns = sum(len(session["turns"]) for session in sessions)
     print(f"review app on http://{args.host}:{args.port}/")
-    print(f"{len(sessions)} sessions, {turns} traces, batch 3 has {len(batch3)} traces")
+    print(f"{len(sessions)} sessions, {turns} traces, batch 4 has {len(batch4)} traces")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

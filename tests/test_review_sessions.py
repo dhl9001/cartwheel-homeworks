@@ -248,3 +248,30 @@ def test_refund_search_batch_is_twenty_five_unseen_traces() -> None:
     }
     assert picks[0]["reason"] == "issue_refund called"
     assert picks[0]["mode"] == "premature_refund_claim"
+
+
+def test_stability_batch_is_fifteen_unseen_traces() -> None:
+    from analysis.review_app.batch import (
+        first_reading_batch,
+        refund_search_batch,
+        role_reading_batch,
+        traces_from_sessions,
+        uniform_stability_batch,
+    )
+
+    export_path = Path(__file__).resolve().parents[1] / "traces" / "support_traces.json"
+    export = json.loads(export_path.read_text())
+    traces = traces_from_sessions(build_sessions(export))
+    batch1 = first_reading_batch(traces)
+    batch2 = role_reading_batch(traces, {pick["trace_id"] for pick in batch1})
+    reviewed = {pick["trace_id"] for pick in batch1} | {pick["trace_id"] for pick in batch2}
+    batch3 = refund_search_batch(traces, reviewed)
+    reviewed |= {pick["trace_id"] for pick in batch3}
+    picks = uniform_stability_batch(traces, reviewed)
+    ids = [pick["trace_id"] for pick in picks]
+    assert len(ids) == 15
+    assert len(set(ids)) == 15
+    assert not (set(ids) & reviewed)
+    assert {pick["reason"] for pick in picks} == {"uniform sample"}
+    assert {pick["review_batch"] for pick in picks} == {"4"}
+    assert len(reviewed) + len(ids) == 100

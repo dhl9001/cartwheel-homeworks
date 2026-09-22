@@ -668,6 +668,117 @@
           "mode": "premature_refund_claim"
         }
       ]
+    },
+    {
+      "number": 4,
+      "detail": "Fifteen more uniform traces, after the taxonomy draft, to see whether a new consequential failure still appears.",
+      "picks": [
+        {
+          "trace_id": "b4d3420e3e5572d7b3dbd2ace6825dd0",
+          "scenario_id": "full-064",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "832ef0bc48989a9e9c047feaa9dcea19",
+          "scenario_id": "full-094",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "bae25a9c1f06a5bf585875d2786e2510",
+          "scenario_id": "full-015",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "7f75105b05ff7786ac981ef0bcec028d",
+          "scenario_id": "full-040",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "b9fee3e0c1e1843c6a6bc4c3034c968c",
+          "scenario_id": "full-094",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "1242fc11a51a78e0bf6aa0abd06a9c49",
+          "scenario_id": "full-002",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "2f2c917685e0b9dfbb5af07aeecc1afe",
+          "scenario_id": "full-004",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "99461950d1137b2594e208ae49b07e0d",
+          "scenario_id": "full-054",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "46952c8040ff1f5937969bf888a503bd",
+          "scenario_id": "full-012",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "1093caaaa35d7fc33ca668496a68842c",
+          "scenario_id": "full-038",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "9d1f4c48f7701e41cca0825936d54154",
+          "scenario_id": "full-056",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "858f40e104602e469a12bbefd90429b1",
+          "scenario_id": "full-078",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "6d57af168adc41e7071a61c301b953f4",
+          "scenario_id": "full-052",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "49efeff9f4f63aa087e482812624e9f6",
+          "scenario_id": "full-018",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        },
+        {
+          "trace_id": "ec2cb5e4decc3d2ae19c800537fbe5f5",
+          "scenario_id": "full-083",
+          "reason": "uniform sample",
+          "batch": "uniform",
+          "review_batch": "4"
+        }
+      ]
     }
   ]
 }
