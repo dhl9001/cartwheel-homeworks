@@ -217,7 +217,7 @@
         "70a555857738eb20382c25bb495c04db",
         "ef7942dc762a4cac3ec0a0e6297f408f"
       ],
-      "boundary": "full-079 and full-081 are close negatives: issue_refund ran and the review recorded no failure. full-094 stays in this group; the reason there is a data issue rather than a human.",
+      "boundary": "full-079, full-081, and full-007 are close negatives: issue_refund returned auto_approved, and the reply reports that completed refund. full-094 stays in this group; the reason there is a data issue rather than a human.",
       "close_negatives": [
         {
           "annotation_id": "a1790093957517",
@@ -228,6 +228,11 @@
           "annotation_id": "a1790093989284",
           "trace_id": "5aa1424fdc17ac65453537981f6401c8",
           "scenario_id": "full-081"
+        },
+        {
+          "trace_id": "bc7f60adb548264354fd1ebc0b7d31c3",
+          "scenario_id": "full-007",
+          "reason": "issue_refund returned auto_approved for $56. The reply reports that completed status. The notes on this trace are about other candidates."
         }
       ],
       "rejected_search_hits": [
@@ -334,6 +339,10 @@
     {
       "at": "2026-09-22T18:10:00+01:00",
       "change": "Wrote the two specification gaps into SPEC.md. RESP-1 now forbids naming a policy document id in a reply. RESP-6 forbids stating refund eligibility, or that a refund is being submitted, while human review, an open policy question, or a disagreeing order record is still unresolved."
+    },
+    {
+      "at": "2026-09-22T18:18:00+01:00",
+      "change": "Accepted full-007 as the third close negative for premature_refund_claim. issue_refund returned auto_approved, and the reply reports that completed refund."
     }
   ]
 }

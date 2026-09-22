@@ -36,7 +36,7 @@ The last batch added one previously unseen note, on `full-056`: the agent should
 
 After the refund search, `premature_refund_claim` was narrowed. A reply that says an order is refund-eligible, or that a refund is being submitted, is this failure only while a person still has to approve it, a policy question is still open, or the order record disagrees with the policy.
 
-`full-079` was rejected as a search hit and kept as a close negative. `issue_refund` returned `auto_approved`, and the note on annotation `a1790093957517` was "no failure observed." Reporting a refund the tool has already approved is not this failure. `full-053` was also rejected: the reply says the dry bag is eligible and under $100, then asks before issuing anything. Nothing is left unsettled.
+`full-079` was rejected as a search hit and kept as a close negative. `issue_refund` returned `auto_approved`, and the note on annotation `a1790093957517` was "no failure observed." Reporting a refund the tool has already approved is not this failure. `full-081` is the same shape. `full-007` is the third close negative: `issue_refund` returned `auto_approved` for $56, and the reply reports that status. `full-053` was also rejected: the reply says the dry bag is eligible and under $100, then asks before issuing anything. Nothing is left unsettled.
 
 ## Specification
 
