@@ -42,7 +42,7 @@ After the refund search, `premature_refund_claim` was narrowed. A reply that say
 
 Two gaps found in the notes are now written in `SPEC.md`. The running system prompt was not changed.
 
-`RESP-1` now forbids naming a policy document id in a user-visible reply. The motivating note is `a1790085259356` on `full-007`, quote `cw-refunds`, note "Don't cite internal doc name."
+`RESP-1` now forbids naming a policy document id in a user-visible reply. The motivating note is `a1790085259356` on `full-007`, quote `cw-refunds`, note "Don't cite internal doc name." Close negatives are `full-079`, `full-070`, and `full-033`: each states the 5–10 day timing or the $100 threshold and does not name a document id.
 
 `RESP-6` forbids stating refund eligibility, or that a refund is being submitted, while human review, an open policy question, or a disagreeing order record is still unresolved. The motivating note is `a1790094260938` on `full-066`, note "dont confirm eligible if it needs human review first." `RESP-2` still covers claiming success before the tool reports success.
 

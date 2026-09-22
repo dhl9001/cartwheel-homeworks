@@ -64,7 +64,24 @@
       "status": "candidate",
       "definition": "The reply includes any policy document identifier, including platform ids such as cw-returns and store policy ids.",
       "requirement_source": "SPEC.md RESP-1. A user-visible reply must not name a policy document identifier.",
-      "boundary": "RESP-1 was revised after annotation a1790085259356 on full-007, which marked the quote cw-refunds as an internal document name. Tool calls may still carry the identifier.",
+      "boundary": "RESP-1 was revised after annotation a1790085259356 on full-007, which marked the quote cw-refunds as an internal document name. Tool calls may still carry the identifier. full-079, full-070, and full-033 are close negatives: each states the 5–10 day timing or the $100 threshold and does not name a document id.",
+      "close_negatives": [
+        {
+          "trace_id": "45cd21196bed1e4db29545ee4fb62004",
+          "scenario_id": "full-079",
+          "reason": "The reply gives the 5–10 business day refund timing and does not name a policy document id."
+        },
+        {
+          "trace_id": "fa40a4e2c246c574daf5f26a3540e371",
+          "scenario_id": "full-070",
+          "reason": "The reply states the $100 auto-approval threshold and does not name a policy document id."
+        },
+        {
+          "trace_id": "235ceaaabf9699c5c7f731050fef4022",
+          "scenario_id": "full-033",
+          "reason": "The reply states the $100 auto-approval threshold and does not name a policy document id."
+        }
+      ],
       "created_from": [
         "a1790084680120",
         "a1790085259356",
@@ -343,6 +360,10 @@
     {
       "at": "2026-09-22T18:18:00+01:00",
       "change": "Accepted full-007 as the third close negative for premature_refund_claim. issue_refund returned auto_approved, and the reply reports that completed refund."
+    },
+    {
+      "at": "2026-09-22T18:23:00+01:00",
+      "change": "Accepted full-079, full-070, and full-033 as close negatives for cited_policy_id. Each states a refund rule and does not name a policy document id."
     }
   ]
 }
