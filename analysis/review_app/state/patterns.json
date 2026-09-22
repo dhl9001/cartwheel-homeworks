@@ -1,0 +1,491 @@
+{
+  "accepted_at": "2026-09-22T17:38:00+01:00",
+  "source": "Eight confirmed modes. Each has a definition, three close negatives, a boundary, an evaluator type, and a SPEC.md requirement.",
+  "modes": [
+    {
+      "name": "narrated_method",
+      "title": "The reply describes its own method",
+      "status": "confirmed",
+      "definition": "The reply tells the user which search, tool, or policy it is about to use, or explains an internal system step, instead of only giving the result.",
+      "requirement_source": "SPEC.md RESP-7. The motivating note is a1790085679260 on full-094.",
+      "created_from": [
+        "a1790085679260",
+        "a1790085698677",
+        "a1790085731804",
+        "a1790085858592",
+        "a1790085958830",
+        "a1790086787528",
+        "a1790086807573",
+        "a1790087127657",
+        "a1790087198022",
+        "a1790085356114",
+        "a1790085418339",
+        "a1790086523114",
+        "a1790084855722",
+        "a1790085283823",
+        "a1790086440544",
+        "a1790086571122",
+        "a1790090206582",
+        "a1790090398967",
+        "a1790090547770",
+        "a1790090569707",
+        "a1790090576884",
+        "a1790090740671",
+        "a1790090808378",
+        "a1790090874457",
+        "a1790091071720",
+        "a1790091080270"
+      ],
+      "example_trace_ids": [
+        "ef7942dc762a4cac3ec0a0e6297f408f",
+        "e68b6352e51d75a1895b4b5cd38b69e0",
+        "d07519720c50be652085b731ee9c38de",
+        "611f3372d559f8b0616bb68cead9dd9d",
+        "0a17bbaacde4c84c4936b73646a66a2b",
+        "5cce752dfee53b5c649973612a6bd8b2",
+        "54457b2e4a73a69f85f321d47443ac30",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "bd1d6200b2d313aebcf9bd3e2a1f9f7e",
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "d47b3ac5990d737c43cc67129d5ce3fe",
+        "6a6e522fbac34ffe867099ec157b7b2d",
+        "5a7afbc8afe734e685213bd4b2ebd247",
+        "2819ef7dc1cf0f4f74f90259477c0ad8",
+        "253b82d858ffd34304854008a54f0c04",
+        "ea7fecc989cd3b23fd46648846b03eef",
+        "3e1575134659e5dd8d7b3cf98512e9ef"
+      ],
+      "evaluator_type": "judge",
+      "boundary": "Nearest neighbor is cited_policy_id: naming a document id is that mode, and previewing the search or tool is this one. A sentence can be both. Announcing a finished ticket is not this mode. full-100, full-091, and full-089 are close negatives: each reports a result or a rule and does not preview a search or tool.",
+      "close_negatives": [
+        {
+          "trace_id": "77fb8d770a59f030ff7ca4246e0c4d1c",
+          "scenario_id": "full-100",
+          "reason": "The reply reports that a replacement ticket was already opened."
+        },
+        {
+          "trace_id": "6875f0cd9bdb13d95227924a8ba74301",
+          "scenario_id": "full-091",
+          "reason": "The reply states the 30-day return rule and does not preview a search or tool."
+        },
+        {
+          "trace_id": "8af5a536473c3b02e311ed09e3409760",
+          "scenario_id": "full-089",
+          "reason": "The reply reports that an earlier escalation is still waiting on a person."
+        }
+      ]
+    },
+    {
+      "name": "cited_policy_id",
+      "title": "The reply names a policy document id",
+      "status": "confirmed",
+      "definition": "The reply includes any policy document identifier, including platform ids such as cw-returns and store policy ids.",
+      "requirement_source": "SPEC.md RESP-1. A user-visible reply must not name a policy document identifier.",
+      "boundary": "RESP-1 was revised after annotation a1790085259356 on full-007, which marked the quote cw-refunds as an internal document name. Tool calls may still carry the identifier. full-079, full-070, and full-033 are close negatives: each states the 5\u201310 day timing or the $100 threshold and does not name a document id.",
+      "close_negatives": [
+        {
+          "trace_id": "45cd21196bed1e4db29545ee4fb62004",
+          "scenario_id": "full-079",
+          "reason": "The reply gives the 5\u201310 business day refund timing and does not name a policy document id."
+        },
+        {
+          "trace_id": "fa40a4e2c246c574daf5f26a3540e371",
+          "scenario_id": "full-070",
+          "reason": "The reply states the $100 auto-approval threshold and does not name a policy document id."
+        },
+        {
+          "trace_id": "235ceaaabf9699c5c7f731050fef4022",
+          "scenario_id": "full-033",
+          "reason": "The reply states the $100 auto-approval threshold and does not name a policy document id."
+        }
+      ],
+      "created_from": [
+        "a1790084680120",
+        "a1790085259356",
+        "a1790085473729",
+        "a1790085772023",
+        "a1790085775547",
+        "a1790085790340",
+        "a1790085872355",
+        "a1790085878325",
+        "a1790086490598",
+        "a1790086571122",
+        "a1790087119117",
+        "a1790087192726",
+        "a1790090318007",
+        "a1790090439952",
+        "a1790090597382",
+        "a1790090757576",
+        "a1790090883338",
+        "a1790090967743",
+        "a1790090916886",
+        "a1790090921595",
+        "a1790091619030"
+      ],
+      "example_trace_ids": [
+        "345306195e846a24db91b8cb2434cebb",
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "ef7942dc762a4cac3ec0a0e6297f408f",
+        "e68b6352e51d75a1895b4b5cd38b69e0",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "5cce752dfee53b5c649973612a6bd8b2",
+        "54457b2e4a73a69f85f321d47443ac30",
+        "49c2a73b3a405c8a139f81945c3916e1",
+        "6a6e522fbac34ffe867099ec157b7b2d",
+        "5a7afbc8afe734e685213bd4b2ebd247",
+        "2819ef7dc1cf0f4f74f90259477c0ad8",
+        "ea7fecc989cd3b23fd46648846b03eef",
+        "a2358aef4143b922cf95b7dced86d5ed",
+        "ced654dbd2aae57322ce3cec4fe7e344",
+        "b10c1dca878b6c4e819275179dca7744"
+      ],
+      "evaluator_type": "code"
+    },
+    {
+      "name": "unasked_facts",
+      "title": "The reply adds facts the user did not ask for",
+      "status": "confirmed",
+      "definition": "The reply states a fact, offer, or list the user's message did not ask for.",
+      "requirement_source": "SPEC.md RESP-8. The motivating note is a1790084289463 on full-038.",
+      "created_from": [
+        "a1790084289463",
+        "a1790084340515",
+        "a1790084439465",
+        "a1790084661503",
+        "a1790085468226",
+        "a1790085283823",
+        "a1790086748902",
+        "a1790086490598",
+        "a1790086571122",
+        "a1790090624375",
+        "a1790094707509"
+      ],
+      "example_trace_ids": [
+        "1093caaaa35d7fc33ca668496a68842c",
+        "a0e3934d53f39f808bcce6c297db6903",
+        "345306195e846a24db91b8cb2434cebb",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "fe48b220ba8543b0c2ec08b3ef43ab85",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "5a7afbc8afe734e685213bd4b2ebd247",
+        "56a3af89fae6e68c1b8a385a3ff588ca"
+      ],
+      "evaluator_type": "judge",
+      "boundary": "Nearest neighbor is premature_refund_claim when the extra fact is unsettled refund eligibility, and cited_policy_id when the extra text is a document id. A list the user asked to see is not this mode. full-049, full-027, and full-069 are close negatives.",
+      "close_negatives": [
+        {
+          "trace_id": "9fdabc417dd1386a8cd30b0287b68aa2",
+          "scenario_id": "full-049",
+          "reason": "The user asked to see recent orders, and the reply is that list."
+        },
+        {
+          "trace_id": "78934c82053072e5efb3418bd05e5988",
+          "scenario_id": "full-027",
+          "reason": "The pitcher list is how the reply asks which order to refund."
+        },
+        {
+          "trace_id": "64bce9e854e415f2f466bd462cf63056",
+          "scenario_id": "full-069",
+          "reason": "The user asked to cancel order 1894, and the reply reports that cancellation."
+        }
+      ]
+    },
+    {
+      "name": "unclear_target",
+      "title": "The reply acts before the target is clear",
+      "status": "confirmed",
+      "definition": "The user's request does not identify a single order or time window, and the reply picks one, takes an action, or finishes without asking.",
+      "requirement_source": "SPEC.md RESP-9. The motivating note is a1790085225281 on full-007.",
+      "boundary": "Nearest neighbor is premature_refund_claim when the reply also states unsettled eligibility. full-038 and full-013 stay in this mode: the answer was given and the note asks for a follow-up. full-027, full-032, and the Saltbox-or-Golden-Hour turn of full-094 are close negatives: the reply asks which order or shows both matches.",
+      "created_from": [
+        "a1790085225281",
+        "a1790085493464",
+        "a1790086363190",
+        "a1790086440544",
+        "a1790087050526",
+        "a1790087231766",
+        "a1790084394540",
+        "a1790085914320",
+        "a1790090264621"
+      ],
+      "example_trace_ids": [
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "02c6c7a3bde3a1e8564940e881551852",
+        "f1f797f5a80fbf28d1ffe85c9f7d1438",
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "9fdabc417dd1386a8cd30b0287b68aa2",
+        "b77bbac37897193d8bf5b1c45896e65a",
+        "d5bbfcd7adcc7075a37437169a704667",
+        "e68b6352e51d75a1895b4b5cd38b69e0",
+        "42ee07a255ba3bec49cf4b9d31ece0f7"
+      ],
+      "evaluator_type": "judge",
+      "close_negatives": [
+        {
+          "trace_id": "78934c82053072e5efb3418bd05e5988",
+          "scenario_id": "full-027",
+          "reason": "Several pitcher orders match, and the reply asks for the exact order before acting."
+        },
+        {
+          "trace_id": "d790ee7c44934dda70567715ca8709b8",
+          "scenario_id": "full-032",
+          "reason": "Several field guides match, and the reply asks for the order id before judging eligibility."
+        },
+        {
+          "trace_id": "832ef0bc48989a9e9c047feaa9dcea19",
+          "scenario_id": "full-094",
+          "reason": "The user is unsure between two stores, and the reply shows both orders."
+        }
+      ]
+    },
+    {
+      "name": "unused_tool_call",
+      "title": "A tool call adds nothing the reply needs",
+      "status": "confirmed",
+      "definition": "The assistant calls a tool whose result is already known from an earlier tool, or calls a tool the user's request did not need.",
+      "requirement_source": "SPEC.md RESP-10. The motivating note is a1790085152749 on full-007.",
+      "boundary": "Nearest neighbor is repeated_fact, which is about the reply text. This mode is about the tool call. A lookup followed by the action it unlocks is not unused. full-069, full-062, and full-034 are close negatives.",
+      "created_from": [
+        "a1790085152749",
+        "a1790085171862",
+        "a1790086547496",
+        "a1790086726995",
+        "a1790086762060",
+        "a1790090704030"
+      ],
+      "example_trace_ids": [
+        "bc7f60adb548264354fd1ebc0b7d31c3",
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "fe48b220ba8543b0c2ec08b3ef43ab85",
+        "e679290ff40508dd870b4505b4622026"
+      ],
+      "evaluator_type": "judge",
+      "close_negatives": [
+        {
+          "trace_id": "64bce9e854e415f2f466bd462cf63056",
+          "scenario_id": "full-069",
+          "reason": "get_order confirms the order is still placed, then cancel_order cancels it."
+        },
+        {
+          "trace_id": "5cce752dfee53b5c649973612a6bd8b2",
+          "scenario_id": "full-062",
+          "reason": "The user asked for the escalation rules, so the help-center search and the policy fetch are the answer."
+        },
+        {
+          "trace_id": "fe9717031b9313be99cde3c4bcfa7700",
+          "scenario_id": "full-034",
+          "reason": "get_order confirms the order has not shipped, then cancel_order cancels it."
+        }
+      ]
+    },
+    {
+      "name": "premature_refund_claim",
+      "title": "The reply states a refund is available before it is settled",
+      "status": "confirmed",
+      "definition": "The reply states that an order is refund-eligible, or that a refund is being submitted, while a human still has to approve it, a policy question is still open, or the order record is inconsistent.",
+      "requirement_source": "SPEC.md RESP-6. RESP-2 still covers claiming the refund succeeded before the tool reports success. The motivating note is a1790094260938 on full-066.",
+      "created_from": [
+        "a1790087452459",
+        "a1790094035661",
+        "a1790094115166",
+        "a1790094234542",
+        "a1790094260938",
+        "a1790094438080",
+        "a1790094862769",
+        "a1790094538580"
+      ],
+      "example_trace_ids": [
+        "fa40a4e2c246c574daf5f26a3540e371",
+        "76f849d225d9529e4b2bf670b8dbbd43",
+        "c1567cfaf2bf6538d06936d1e9395b2d",
+        "247048e0f4009040f21be395dcc11eab",
+        "01fdb9f9a4a40c8ac10ce99778e0cd30",
+        "70a555857738eb20382c25bb495c04db",
+        "ef7942dc762a4cac3ec0a0e6297f408f"
+      ],
+      "boundary": "full-079, full-081, and full-007 are close negatives: issue_refund returned auto_approved, and the reply reports that completed refund. full-094 stays in this group; the reason there is a data issue rather than a human.",
+      "close_negatives": [
+        {
+          "annotation_id": "a1790093957517",
+          "trace_id": "45cd21196bed1e4db29545ee4fb62004",
+          "scenario_id": "full-079"
+        },
+        {
+          "annotation_id": "a1790093989284",
+          "trace_id": "5aa1424fdc17ac65453537981f6401c8",
+          "scenario_id": "full-081"
+        },
+        {
+          "trace_id": "bc7f60adb548264354fd1ebc0b7d31c3",
+          "scenario_id": "full-007",
+          "reason": "issue_refund returned auto_approved for $56. The reply reports that completed status. The notes on this trace are about other candidates."
+        }
+      ],
+      "rejected_search_hits": [
+        "full-039",
+        "full-043",
+        "full-053",
+        "full-083",
+        "full-084",
+        "full-086",
+        "full-087",
+        "full-098",
+        "full-092",
+        "full-022",
+        "full-023",
+        "full-044",
+        "full-055",
+        "full-096"
+      ],
+      "evaluator_type": "judge"
+    },
+    {
+      "name": "repeated_fact",
+      "title": "The reply repeats something already said",
+      "status": "confirmed",
+      "definition": "The reply repeats a fact already stated in the same reply, or repeats work an earlier turn of the session already covered.",
+      "requirement_source": "SPEC.md RESP-11. The motivating note is a1790091475675 on full-091.",
+      "created_from": [
+        "a1790086618995",
+        "a1790085620620",
+        "a1790091475675"
+      ],
+      "example_trace_ids": [
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "832ef0bc48989a9e9c047feaa9dcea19",
+        "6875f0cd9bdb13d95227924a8ba74301"
+      ],
+      "evaluator_type": "judge",
+      "boundary": "Nearest neighbor is unasked_facts: a new fact the user did not ask for, rather than the same fact said again. full-063, full-035, and the delivery-time turn of full-038 are close negatives.",
+      "close_negatives": [
+        {
+          "trace_id": "8170f9e0a9ef2a7ac7e8971524b0ed4f",
+          "scenario_id": "full-063",
+          "reason": "The user asks which store the order is from, and the reply answers with that one fact."
+        },
+        {
+          "trace_id": "54a87d818e7630dd9f0db1504d08dbba",
+          "scenario_id": "full-035",
+          "reason": "The user asks for the total, and the reply gives that total once."
+        },
+        {
+          "trace_id": "d5bbfcd7adcc7075a37437169a704667",
+          "scenario_id": "full-038",
+          "reason": "The user asks when the order arrived, and the reply gives the delivery date."
+        }
+      ]
+    },
+    {
+      "name": "escalated_support_user",
+      "title": "The reply opens a ticket for someone who is already support",
+      "status": "confirmed",
+      "definition": "The user is a support agent, and the reply calls escalate_to_human instead of answering or asking what they want done.",
+      "requirement_source": "SPEC.md ESC-5. The motivating note is a1790090517628 on full-033.",
+      "created_from": [
+        "a1790090517628",
+        "a1790087169995"
+      ],
+      "example_trace_ids": [
+        "235ceaaabf9699c5c7f731050fef4022",
+        "75a1affa64cc74144ae2c376279866f0"
+      ],
+      "evaluator_type": "code",
+      "boundary": "Nearest neighbor is premature_refund_claim. full-033 is both: a support user is given a new ticket, and the reply also states eligibility while the refund is queued. full-032, full-034, and full-031 are close negatives: the user is support, and the reply answers or asks without opening a ticket.",
+      "close_negatives": [
+        {
+          "trace_id": "d790ee7c44934dda70567715ca8709b8",
+          "scenario_id": "full-032",
+          "reason": "A support user asks about a refund, and the reply asks for the order id."
+        },
+        {
+          "trace_id": "fe9717031b9313be99cde3c4bcfa7700",
+          "scenario_id": "full-034",
+          "reason": "A support user asks to cancel an order, and the reply cancels it."
+        },
+        {
+          "trace_id": "1f1dbb30f45532c9824c2722dfa84a66",
+          "scenario_id": "full-031",
+          "reason": "A support user asks for an order, and the reply returns the order."
+        }
+      ]
+    }
+  ],
+  "ungrouped": [
+    {
+      "id": "a1790084455336",
+      "scenario_id": "full-020",
+      "note": "Format in a more user friendly way",
+      "reason": "One note about a table. RESP-5 does not specify layout. It becomes a mode only if that formatting requirement is written down."
+    },
+    {
+      "id": "a1790090428532",
+      "scenario_id": "full-006",
+      "note": "Did not look up store specific refund policy",
+      "reason": "One note. The change is to retrieve the store policy before stating that store's terms. The unused-tool group is about an extra lookup."
+    },
+    {
+      "id": "a1790090684025",
+      "scenario_id": "full-061",
+      "note": "If this is the case the agent should specify this only includes products with the name audio associated with it",
+      "reason": "One note. The change is to say the results are limited to the substituted search term. Hiding the method would remove the sentence this note wants kept."
+    },
+    {
+      "id": "a1790090777322",
+      "scenario_id": "full-011",
+      "note": "Strange ordering of communication - this hsould come first to confirm product -> then confirm cancel is possible",
+      "reason": "One note. The change is the order of sentences in one reply. It stays separate from asking before an unclear target."
+    },
+    {
+      "id": "a1790095606287",
+      "scenario_id": "full-056",
+      "note": "Agent should calculate todays' date vs. shipped date and escalte to human if needed otherwise tell user to wait",
+      "reason": "One note from the final 15. The agent would compare the ship date with today, then escalate or tell the user to wait. It stayed ungrouped."
+    }
+  ],
+  "stability": {
+    "batch": 4,
+    "traces": 15,
+    "previously_unseen_notes": 1,
+    "new_modes": 0
+  },
+  "revisions": [
+    {
+      "at": "2026-09-22T16:46:00+01:00",
+      "change": "After batch 2, added escalated_support_user from the full-033 and full-099 notes, and widened cited_policy_id to any policy document id. Three single notes stayed ungrouped."
+    },
+    {
+      "at": "2026-09-22T17:38:00+01:00",
+      "change": "After the refund search, tightened premature_refund_claim so it covers stating eligibility or submitting a refund while human review, policy, or the order record is still unresolved. full-079 and full-081 are close negatives. full-073 joined unasked_facts."
+    },
+    {
+      "at": "2026-09-22T17:48:00+01:00",
+      "change": "The final 15 uniform traces produced one previously unseen note, on full-056. It stayed ungrouped. That is not several new modes, so no extra review batch was added."
+    },
+    {
+      "at": "2026-09-22T18:10:00+01:00",
+      "change": "Wrote the two specification gaps into SPEC.md. RESP-1 now forbids naming a policy document id in a reply. RESP-6 forbids stating refund eligibility, or that a refund is being submitted, while human review, an open policy question, or a disagreeing order record is still unresolved."
+    },
+    {
+      "at": "2026-09-22T18:18:00+01:00",
+      "change": "Accepted full-007 as the third close negative for premature_refund_claim. issue_refund returned auto_approved, and the reply reports that completed refund."
+    },
+    {
+      "at": "2026-09-22T18:23:00+01:00",
+      "change": "Accepted full-079, full-070, and full-033 as close negatives for cited_policy_id. Each states a refund rule and does not name a policy document id."
+    },
+    {
+      "at": "2026-09-22T18:25:00+01:00",
+      "change": "Confirmed all eight modes. Added the remaining close negatives, boundaries, and evaluator types. Wrote RESP-7 through RESP-11 and ESC-5. Compared the taxonomy with AgentDebug and added no mode from it."
+    }
+  ],
+  "agentdebug": {
+    "source": "https://arxiv.org/abs/2509.25370",
+    "comparison": "AgentDebug groups failures into memory, reflection, planning, action, and system. unused_tool_call is the nearest planning overlap (an inefficient plan). premature_refund_claim is the nearest reflection overlap (an outcome stated before it is settled). The other six modes are about what the reply tells the user. AgentDebug does not name those. No AgentDebug category was added, because the reviewed notes do not support a separate memory, action-format, or tool-crash mode."
+  }
+}

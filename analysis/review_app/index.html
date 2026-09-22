@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<!--
+  Homework 4 review interface.
+
+  One session is one scroll. User text, a one-line tool outcome, and the
+  final assistant reply stay open. Arguments, raw tool JSON, and model
+  steps open on click. Notes attach to the trace id of the turn that
+  contains the selected text.
+
+  Role color, margin notes, and the separate suggestion treatment follow
+  the reference interface in analysis/ui/index.html.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cartwheel review</title>
+<style>
+  :root {
+    --role-user: #2563eb;
+    --role-assistant: #059669;
+    --role-tool: #b45309;
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --hl: #fde68a;
+    --hl-pending: #fef08a;
+    --sugg: #ddd6fe;
+    --sugg-border: #7c3aed;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  code, pre, .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+  header.app {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 18px; background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 40;
+  }
+  header.app h1 { font-size: 15px; margin: 0; font-weight: 700; }
+  header.app h1 .dim { color: var(--muted); font-weight: 400; }
+  .views { display: flex; gap: 4px; }
+  .views button, .nav button, .jump button, .queue-tools button, .mnote button, .no-fail {
+    border: 1px solid var(--line); background: var(--bg);
+    border-radius: 6px; cursor: pointer; font: inherit;
+  }
+  .views button { padding: 6px 12px; }
+  .views button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .spacer { flex: 1; }
+  .nav { display: flex; gap: 4px; align-items: center; }
+  .nav button { width: 30px; height: 30px; }
+  .pos, .counts { color: var(--muted); font-size: 13px; }
+  .jump { display: flex; gap: 4px; align-items: center; }
+  .jump input {
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px;
+    font: inherit; width: 110px;
+  }
+  .view { display: none; }
+  .view.active { display: block; }
+  .session-head {
+    position: sticky; top: 53px; z-index: 30;
+    background: var(--bg); max-width: 980px; margin: 0 auto;
+    padding: 14px 0 10px; border-bottom: 1px solid var(--line);
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline;
+  }
+  .session-head .scenario { font-weight: 700; }
+  .session-head .meta { color: var(--muted); font-size: 13px; }
+  .session-head .who {
+    display: inline-block; font-size: 13px; font-weight: 700; color: #fff;
+    padding: 2px 10px; border-radius: 999px; background: #6b7280;
+  }
+  .who.shopper { background: #2563eb; }
+  .who.merchant { background: #7c3aed; }
+  .who.support { background: #b45309; }
+  #session-view { padding: 8px 18px 80px; }
+  .trace-wrap {
+    display: flex; gap: 24px; max-width: 980px; margin: 16px auto 0;
+    align-items: flex-start;
+  }
+  .trace-body { flex: 1; max-width: 720px; }
+  .margin-col { width: 240px; position: relative; flex-shrink: 0; }
+  .system { margin: 14px auto 0; max-width: 980px; color: var(--muted); font-size: 13px; }
+  .system pre {
+    white-space: pre-wrap; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; max-height: 240px; overflow: auto;
+  }
+  .turn {
+    border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+    margin-bottom: 28px; overflow: hidden;
+  }
+  .turn-meta {
+    padding: 8px 14px; font-size: 12px; color: var(--muted);
+    border-bottom: 1px solid var(--line); background: #fafafa;
+  }
+  .msg { padding: 12px 14px; border-left: 4px solid var(--line); }
+  .msg + .tool-group, .tool-group + .msg, .msg + .msg { border-top: 1px solid var(--line); }
+  .msg .role {
+    font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .msg.user { border-left-color: var(--role-user); }
+  .msg.user .role { color: var(--role-user); }
+  .msg.assistant { border-left-color: var(--role-assistant); }
+  .msg.assistant .role { color: var(--role-assistant); }
+  .text { white-space: pre-wrap; word-wrap: break-word; }
+  .text strong { font-weight: 700; }
+  .text code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+  .turn.focus { box-shadow: inset 0 0 0 2px #1a1a1a; }
+  .flag {
+    font-size: 11px; background: #fef3c7; color: #92400e;
+    padding: 2px 7px; border-radius: 10px; margin-left: 8px;
+  }
+  .no-fail { margin-left: 8px; font-size: 12px; padding: 2px 8px; }
+  .tool-group { border-left: 4px solid var(--role-tool); }
+  .tool { padding: 8px 14px; }
+  .tool + .tool { border-top: 1px solid var(--line); }
+  .tool-line { display: flex; gap: 10px; align-items: baseline; }
+  .fn { font-weight: 700; color: var(--role-tool); font-family: ui-monospace, monospace; font-size: 13px; }
+  .sum { flex: 1; }
+  details.raw { margin-top: 6px; }
+  details.raw summary, details.steps summary, details.system summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre.json {
+    background: #f3f4f6; border-radius: 6px; padding: 8px 10px; margin: 6px 0 0;
+    font-size: 12.5px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;
+  }
+  .json-label { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  details.steps { padding: 8px 14px 12px; border-top: 1px solid var(--line); }
+  details.steps li { margin: 8px 0; }
+  .decided { color: var(--role-tool); font-size: 13px; font-family: ui-monospace, monospace; }
+  .hl { background: var(--hl); border-radius: 2px; }
+  .hl.pending-highlight { background: var(--hl-pending); }
+  .hl.sugg { background: var(--sugg); border-bottom: 2px dashed var(--sugg-border); }
+  .hl.outline { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .mnote {
+    position: absolute; left: 0; width: 100%;
+    background: var(--panel); border-left: 3px solid var(--hl);
+    border-radius: 4px; padding: 7px 9px; font-size: 12.5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .mnote.sugg { border-left-color: var(--sugg-border); background: #faf5ff; }
+  .mnote.outline { box-shadow: 0 0 0 2px var(--ink); }
+  .mnote .quote { color: var(--muted); font-style: italic; margin-bottom: 3px; }
+  .mnote .tag { font-size: 10px; font-weight: 700; color: var(--sugg-border); text-transform: uppercase; }
+  .mnote .acts { margin-top: 5px; display: flex; gap: 6px; }
+  .mnote button { font-size: 11px; padding: 2px 8px; }
+  .mnote.human .acts { visibility: hidden; }
+  .mnote.human:hover .acts { visibility: visible; }
+  .mnote .accept { border-color: var(--role-assistant); color: var(--role-assistant); }
+  .mnote .reject, .queue-tools .dismiss { border-color: #dc2626; color: #dc2626; }
+  #popover {
+    position: absolute; z-index: 80; display: none;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.16); padding: 8px;
+  }
+  #popover input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; width: 280px; }
+  #popover .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .panel { max-width: 980px; margin: 0 auto; padding: 18px; }
+  .mode-block, .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px; margin-bottom: 12px;
+  }
+  .mode-block h3 { margin: 0 0 4px; font-size: 16px; }
+  .mode-block .mode-name { font-family: ui-monospace, monospace; font-size: 12px; }
+  .choice.on { background: #1a1a1a; color: #fff; }
+  .label-row {
+    display: flex; gap: 12px; align-items: center; padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+  .label-row .name { flex: 1; }
+  .sugg-row, .prog-row {
+    display: flex; gap: 10px; align-items: baseline; padding: 8px 0;
+    border-top: 1px solid var(--line); font-size: 13px;
+  }
+  .prog-row { cursor: pointer; }
+  .prog-row:hover { color: var(--role-user); }
+  .prog-row .done { color: var(--role-assistant); font-size: 12px; }
+  .queue-tools { display: flex; gap: 8px; margin-bottom: 8px; }
+  .queue-tools button { font-size: 12px; padding: 4px 10px; }
+  #toast {
+    position: fixed; right: 18px; bottom: 18px; z-index: 90;
+    background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; opacity: 0; transition: opacity .2s;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header class="app">
+  <h1>Cartwheel <span class="dim">review</span></h1>
+  <div class="views">
+    <button data-view="session" class="active">Session</button>
+    <button data-view="taxonomy">Taxonomy</button>
+    <button data-view="suggestions">Suggestions</button>
+    <button data-view="progress">Progress</button>
+    <button data-view="labels">Labels</button>
+  </div>
+  <div class="spacer"></div>
+  <form class="jump" id="jump">
+    <input id="scenario-input" placeholder="full-094" aria-label="scenario id" />
+    <button type="submit">Go</button>
+  </form>
+  <div class="nav" id="session-nav">
+    <button id="prev" type="button" aria-label="previous session">&larr;</button>
+    <span class="pos" id="pos">0 / 0</span>
+    <button id="next" type="button" aria-label="next session">&rarr;</button>
+  </div>
+  <div class="counts" id="counts"></div>
+</header>
+
+<div id="session-view" class="view active">
+  <div class="session-head" id="session-head"></div>
+  <details class="system" id="system"></details>
+  <div class="trace-wrap">
+    <div class="trace-body" id="trace-body"></div>
+    <div class="margin-col" id="margin-col"></div>
+  </div>
+</div>
+
+<div id="taxonomy-view" class="view"><div class="panel" id="taxonomy"></div></div>
+<div id="suggestions-view" class="view"><div class="panel" id="suggestions"></div></div>
+<div id="progress-view" class="view"><div class="panel" id="progress"></div></div>
+<div id="labels-view" class="view"><div class="panel" id="labels"></div></div>
+
+<div id="popover">
+  <input id="note-input" placeholder="what went wrong? (Enter to save)" />
+  <div class="hint">free-form note, in your own words</div>
+</div>
+<div id="toast"></div>
+
+<script>
+const state = {
+  sessions: [],
+  queue: [],
+  queueBatch: 2,
+  batches: [],
+  qi: 0,
+  focusTrace: null,
+  annotations: [],
+  suggestions: [],
+  patterns: {modes: []},
+  labels: [],
+  labelCursor: 0,
+  cur: 0,
+};
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+function pretty(value) {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+}
+function renderInline(text) {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([\s\S]+?)\*\*/g, "<strong>$1</strong>");
+}
+function clip(text, n) {
+  text = String(text || "");
+  return text.length > n ? text.slice(0, n - 1) + "…" : text;
+}
+function toast(message) {
+  const el = document.getElementById("toast");
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 1600);
+}
+
+async function loadAll() {
+  const [sessions, annotations, suggestions, patterns, labels] = await Promise.all([
+    fetch("/api/sessions").then((r) => r.json()),
+    fetch("/api/annotations").then((r) => r.json()),
+    fetch("/api/suggestions").then((r) => r.json()),
+    fetch("/api/patterns").then((r) => r.json()),
+    fetch("/api/labels").then((r) => r.json()),
+  ]);
+  state.sessions = sessions.sessions || [];
+  state.queue = sessions.queue || [];
+  state.queueBatch = sessions.queue_batch || 2;
+  state.batches = sessions.batches || [];
+  state.annotations = Array.isArray(annotations) ? annotations : [];
+  state.suggestions = Array.isArray(suggestions) ? suggestions : [];
+  state.patterns = patterns && Array.isArray(patterns.modes) ? patterns : {modes: []};
+  state.labels = Array.isArray(labels.labels) ? labels.labels : [];
+}
+
+function current() { return state.sessions[state.cur]; }
+
+function notesFor(traceId) {
+  const human = state.annotations
+    .filter((a) => a.trace_id === traceId)
+    .map((a) => ({...a, kind: "human"}));
+  const sugg = state.suggestions
+    .filter((s) => s.trace_id === traceId && s.status !== "rejected")
+    .map((s) => ({...s, kind: "sugg", note: s.note || s.reason || ""}));
+  return [...human, ...sugg];
+}
+
+function covers(traceId) {
+  return state.annotations.some((a) => a.trace_id === traceId || a.for_trace === traceId);
+}
+
+function queueItem() {
+  return state.queue[state.qi] || null;
+}
+
+function findPick(traceId) {
+  for (const batch of state.batches || []) {
+    const found = (batch.picks || []).find((pick) => pick.trace_id === traceId);
+    if (found) return found;
+  }
+  return (state.queue || []).find((pick) => pick.trace_id === traceId) || null;
+}
+
+function renderChrome() {
+  const session = current();
+  const pos = document.getElementById("pos");
+  pos.textContent = state.queue.length ? `${state.qi + 1} / ${state.queue.length}` : "0 / 0";
+  const reviewed = state.queue.filter((item) => covers(item.trace_id)).length;
+  document.getElementById("counts").textContent =
+    `${reviewed} / ${state.queue.length} batch ${state.queueBatch} traces noted`;
+  const head = document.getElementById("session-head");
+  if (!session) {
+    head.innerHTML = '<span class="meta">no sessions</span>';
+    return;
+  }
+  const inSession = new Set(session.turns.map((turn) => turn.trace_id));
+  const focusId = inSession.has(state.focusTrace)
+    ? state.focusTrace
+    : (queueItem() && inSession.has(queueItem().trace_id) ? queueItem().trace_id : null);
+  const pick = focusId ? findPick(focusId) : null;
+  const batch = pick
+    ? `<span class="flag">batch ${escapeHtml(pick.review_batch || state.queueBatch)} · ${escapeHtml(pick.reason)}</span>`
+    : "";
+  const knownRole = ["shopper", "merchant", "support"].includes(session.role) ? session.role : "";
+  head.innerHTML =
+    `<span class="scenario">${escapeHtml(session.scenario_id)}</span>` +
+    `<span class="who ${knownRole}">${escapeHtml(session.role)}</span>` +
+    `<span class="meta">user ${escapeHtml(session.user_id)}</span>` +
+    `<span class="meta">${session.turns.length} turn${session.turns.length === 1 ? "" : "s"}</span>` +
+    batch;
+}
+
+function renderSystem() {
+  const session = current();
+  const box = document.getElementById("system");
+  const prompt = session && session.system_prompt;
+  if (!prompt) { box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  box.open = false;
+  box.innerHTML = `<summary>System prompt, same text on every turn</summary><pre>${escapeHtml(prompt)}</pre>`;
+}
+
+function annotatable(traceId, text, markdown) {
+  const body = markdown ? renderInline(text) : escapeHtml(text);
+  return `<div class="text annotatable" data-trace-id="${escapeHtml(traceId)}">${body}</div>`;
+}
+
+function renderTool(traceId, tool) {
+  return `<div class="tool">` +
+    `<div class="tool-line"><span class="fn">${escapeHtml(tool.name)}</span>` +
+    `<span class="sum annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(tool.summary)}</span></div>` +
+    `<details class="raw"><summary>arguments and result</summary>` +
+    `<div class="json-label">Arguments</div>` +
+    `<pre class="json annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(pretty(tool.arguments))}</pre>` +
+    `<div class="json-label">Result</div>` +
+    `<pre class="json annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(pretty(tool.result))}</pre>` +
+    `</details></div>`;
+}
+
+function sameText(left, right) {
+  return String(left || "").replace(/\s+/g, " ").trim() === String(right || "").replace(/\s+/g, " ").trim();
+}
+
+function assistantBlock(traceId, text) {
+  if (!text || !String(text).trim()) return "";
+  return `<div class="msg assistant"><div class="role">Assistant</div>${annotatable(traceId, text, true)}</div>`;
+}
+
+function takeTools(queue, names) {
+  if (!names.length) return [];
+  const head = queue.slice(0, names.length);
+  const headNames = head.map((tool) => tool.name).slice().sort().join("\0");
+  const wantNames = names.slice().sort().join("\0");
+  if (head.length === names.length && headNames === wantNames) return queue.splice(0, names.length);
+  const picked = [];
+  names.forEach((name) => {
+    const idx = queue.findIndex((tool) => tool.name === name && !picked.includes(tool));
+    if (idx >= 0) picked.push(queue[idx]);
+  });
+  picked.sort((a, b) => queue.indexOf(a) - queue.indexOf(b));
+  picked.forEach((tool) => {
+    const idx = queue.indexOf(tool);
+    if (idx >= 0) queue.splice(idx, 1);
+  });
+  return picked;
+}
+
+function toolGroup(traceId, tools) {
+  if (!tools.length) return "";
+  return `<div class="tool-group">${tools.map((tool) => renderTool(traceId, tool)).join("")}</div>`;
+}
+
+function renderTurnBody(turn) {
+  const queue = (turn.tools || []).slice();
+  const steps = turn.model_steps || [];
+  let html = `<div class="msg user"><div class="role">User</div>${annotatable(turn.trace_id, turn.user_text, true)}</div>`;
+  if (!steps.length) {
+    return html + toolGroup(turn.trace_id, queue) + assistantBlock(turn.trace_id, turn.assistant_text);
+  }
+  let showedFinal = false;
+  steps.forEach((step) => {
+    html += assistantBlock(turn.trace_id, step.text);
+    if (sameText(step.text, turn.assistant_text)) showedFinal = true;
+    html += toolGroup(turn.trace_id, takeTools(queue, step.tools || []));
+  });
+  html += toolGroup(turn.trace_id, queue);
+  if (!showedFinal) html += assistantBlock(turn.trace_id, turn.assistant_text);
+  return html;
+}
+
+function renderSession() {
+  renderChrome();
+  renderSystem();
+  const session = current();
+  const body = document.getElementById("trace-body");
+  if (!session) { body.innerHTML = ""; layoutMargin(); return; }
+  body.innerHTML = session.turns.map((turn, index) => {
+    const shortId = String(turn.trace_id).slice(0, 8);
+    const focused = turn.trace_id === state.focusTrace;
+    const already = covers(turn.trace_id);
+    const noFail = focused
+      ? `<button type="button" class="no-fail" data-trace="${escapeHtml(turn.trace_id)}" ${already ? "disabled" : ""}>No failure observed</button>`
+      : "";
+    return `<section class="turn${focused ? " focus" : ""}" id="turn-${escapeHtml(turn.trace_id)}">` +
+      `<div class="turn-meta">Turn ${index + 1} · ${escapeHtml(shortId)}${noFail}</div>` +
+      renderTurnBody(turn) +
+      `</section>`;
+  }).join("");
+  applyHighlights();
+  layoutMargin();
+  body.querySelectorAll(".no-fail").forEach((btn) => {
+    btn.onclick = () => markNoFailure(btn.dataset.trace);
+  });
+}
+
+function collectText(el) {
+  const nodes = [];
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let node;
+  let full = "";
+  while ((node = walker.nextNode())) {
+    nodes.push({node, start: full.length});
+    full += node.textContent;
+  }
+  return {nodes, full};
+}
+
+function wrapQuote(el, start, end, className, itemId) {
+  const {nodes} = collectText(el);
+  let startNode = null;
+  let startOff = 0;
+  let endNode = null;
+  let endOff = 0;
+  nodes.forEach((entry) => {
+    const nodeEnd = entry.start + entry.node.textContent.length;
+    if (!startNode && start >= entry.start && start <= nodeEnd) {
+      startNode = entry.node;
+      startOff = start - entry.start;
+    }
+    if (end >= entry.start && end <= nodeEnd) {
+      endNode = entry.node;
+      endOff = end - entry.start;
+    }
+  });
+  if (!startNode || !endNode) return;
+  const range = document.createRange();
+  range.setStart(startNode, startOff);
+  range.setEnd(endNode, endOff);
+  const span = document.createElement("span");
+  span.className = className;
+  span.dataset.item = itemId;
+  try {
+    range.surroundContents(span);
+  } catch (err) {
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+  }
+}
+
+function applyHighlights() {
+  document.querySelectorAll(".annotatable").forEach((el) => {
+    const full = el.textContent;
+    const found = [];
+    notesFor(el.dataset.traceId).forEach((item) => {
+      if (!item.quote) return;
+      const pos = full.indexOf(item.quote);
+      if (pos >= 0) found.push([pos, pos + item.quote.length, item]);
+    });
+    found.sort((a, b) => a[0] - b[0]);
+    const kept = [];
+    let cursor = 0;
+    found.forEach((range) => {
+      if (range[0] < cursor) return;
+      kept.push(range);
+      cursor = range[1];
+    });
+    kept.sort((a, b) => b[0] - a[0]);
+    kept.forEach(([start, end, item]) => {
+      const cls = item.kind === "sugg" ? "hl sugg" : "hl";
+      wrapQuote(el, start, end, cls, item.id);
+    });
+  });
+}
+
+function layoutMargin() {
+  const col = document.getElementById("margin-col");
+  col.innerHTML = "";
+  const session = current();
+  if (!session) return;
+  const items = session.turns.flatMap((turn) => notesFor(turn.trace_id));
+  if (!items.length) return;
+  const colRect = col.getBoundingClientRect();
+  const placed = items.map((item) => {
+    const hl = document.querySelector(`.hl[data-item="${CSS.escape(item.id)}"]`);
+    const top = hl ? hl.getBoundingClientRect().top - colRect.top : 0;
+    return {item, top, hl};
+  }).sort((a, b) => a.top - b.top);
+  let lastBottom = 0;
+  placed.forEach(({item, top, hl}) => {
+    const note = document.createElement("div");
+    note.className = "mnote " + (item.kind === "sugg" ? "sugg" : "human");
+    const quote = item.quote ? `<div class="quote">“${escapeHtml(clip(item.quote, 80))}”</div>` : "";
+    const tag = item.kind === "sugg" ? `<div class="tag">agent suggestion</div>` : "";
+    const acts = item.kind === "sugg"
+      ? `<div class="acts"><button class="accept" data-accept="${escapeHtml(item.id)}">Accept</button><button class="reject" data-reject="${escapeHtml(item.id)}">Reject</button></div>`
+      : `<div class="acts"><button data-del="${escapeHtml(item.id)}">Delete</button></div>`;
+    note.innerHTML = `${tag}${quote}<div class="body">${escapeHtml(item.note || "")}</div>${acts}`;
+    const y = Math.max(top, lastBottom);
+    note.style.top = y + "px";
+    col.appendChild(note);
+    lastBottom = y + note.offsetHeight + 8;
+    if (hl) {
+      note.addEventListener("mouseenter", () => hl.classList.add("outline"));
+      note.addEventListener("mouseleave", () => hl.classList.remove("outline"));
+      hl.addEventListener("mouseenter", () => note.classList.add("outline"));
+      hl.addEventListener("mouseleave", () => note.classList.remove("outline"));
+    }
+  });
+  col.querySelectorAll("[data-del]").forEach((btn) => {
+    btn.onclick = () => deleteAnnotation(btn.dataset.del);
+  });
+  col.querySelectorAll("[data-accept]").forEach((btn) => {
+    btn.onclick = () => acceptSuggestion(btn.dataset.accept);
+  });
+  col.querySelectorAll("[data-reject]").forEach((btn) => {
+    btn.onclick = () => rejectSuggestion(btn.dataset.reject);
+  });
+}
+
+function renderTaxonomy() {
+  const root = document.getElementById("taxonomy");
+  const modes = state.patterns.modes || [];
+  if (!modes.length) {
+    root.innerHTML = `<div class="card"><p>No failure modes yet.</p><p class="muted">Modes are groups of notes you have already written. They show up here after axial coding, each with the notes that produced it.</p></div>`;
+    return;
+  }
+  const linked = (mode) => {
+    const ids = mode.created_from || [];
+    if (ids.length) return state.annotations.filter((a) => ids.includes(a.id));
+    return state.annotations.filter((a) => (mode.example_trace_ids || []).includes(a.trace_id));
+  };
+  const blocks = modes.map((mode) => {
+    const items = linked(mode).map((a) => `<li>${escapeHtml(clip(a.note, 160))}</li>`).join("") || `<li class="muted">no linked notes</li>`;
+    const source = mode.requirement_source ? `<p class="muted">${escapeHtml(mode.requirement_source)}</p>` : "";
+    const evaluator = mode.evaluator_type ? `<p class="muted">Evaluator: ${escapeHtml(mode.evaluator_type)}</p>` : "";
+    const boundary = mode.boundary ? `<p class="muted">${escapeHtml(mode.boundary)}</p>` : "";
+    const negatives = (mode.close_negatives || []).map((item) => item.scenario_id).filter(Boolean);
+    const negativeLine = negatives.length
+      ? `<p class="muted">Close negatives: ${escapeHtml(negatives.join(", "))}</p>`
+      : "";
+    return `<article class="mode-block"><h3>${escapeHtml(mode.title || mode.name || "")}</h3><p class="mode-name muted">${escapeHtml(mode.name || "")} · ${escapeHtml(mode.status || "candidate")}</p><p>${escapeHtml(mode.definition || "")}</p>${source}${evaluator}${boundary}${negativeLine}<ul>${items}</ul></article>`;
+  }).join("");
+  const held = state.patterns.ungrouped || [];
+  const heldHtml = held.length
+    ? `<article class="mode-block"><h3>Left ungrouped</h3><p class="muted">Accepted as observations that are not one of the groups above.</p><ul>${held.map((item) => `<li>${escapeHtml(clip(item.note || "", 160))}</li>`).join("")}</ul></article>`
+    : "";
+  root.innerHTML = blocks + heldHtml;
+}
+
+function renderSuggestions() {
+  const root = document.getElementById("suggestions");
+  const pending = state.suggestions.filter((s) => s.status !== "rejected");
+  const rejected = state.suggestions.filter((s) => s.status === "rejected");
+  const row = (item, controls) =>
+    `<div class="sugg-row"><span class="mono">${escapeHtml(item.mode || "suggestion")}</span><span>${escapeHtml(clip(item.note || item.quote || "", 180))}</span>${controls}</div>`;
+  const pendingHtml = pending.length
+    ? pending.map((item) => row(item, `<button class="accept" data-accept="${escapeHtml(item.id)}">Accept</button><button class="reject" data-reject="${escapeHtml(item.id)}">Reject</button>`)).join("")
+    : `<p class="muted">No suggestions waiting. Agent ideas show up here, separate from your notes, and stay suggestions until you accept or reject them.</p>`;
+  const rejectedHtml = rejected.length
+    ? `<h3>Rejected</h3>` + rejected.map((item) => row(item, "")).join("")
+    : "";
+  root.innerHTML = `<div class="card"><h2>Suggestions</h2>${pendingHtml}${rejectedHtml}</div>`;
+  root.querySelectorAll("[data-accept]").forEach((btn) => { btn.onclick = () => acceptSuggestion(btn.dataset.accept); });
+  root.querySelectorAll("[data-reject]").forEach((btn) => { btn.onclick = () => rejectSuggestion(btn.dataset.reject); });
+}
+
+function showPick(item, queueIndex) {
+  if (!item) return;
+  if (queueIndex != null && queueIndex >= 0) state.qi = queueIndex;
+  state.focusTrace = item.trace_id;
+  const sessionIndex = state.sessions.findIndex((session) =>
+    session.turns.some((turn) => turn.trace_id === item.trace_id));
+  if (sessionIndex >= 0) state.cur = sessionIndex;
+  showView("session");
+  const node = document.getElementById("turn-" + item.trace_id);
+  if (node) node.scrollIntoView({block: "start"});
+}
+
+function openQueue(index) {
+  showPick(state.queue[index], index);
+}
+
+function renderProgress() {
+  const root = document.getElementById("progress");
+  const batches = state.batches.length
+    ? state.batches
+    : [{number: state.queueBatch, detail: "", picks: state.queue}];
+  root.innerHTML = batches.map((batch) => {
+    const rows = (batch.picks || []).map((item) => {
+      const mark = covers(item.trace_id)
+        ? `<span class="done">noted</span>`
+        : `<span class="muted">unread</span>`;
+      const queueIndex = state.queue.findIndex((entry) => entry.trace_id === item.trace_id);
+      return `<div class="prog-row" data-trace="${escapeHtml(item.trace_id)}" data-q="${queueIndex}"><span class="mono">${escapeHtml(item.scenario_id)}</span><span>${escapeHtml(item.reason)}</span>${mark}</div>`;
+    }).join("");
+    const reviewed = (batch.picks || []).filter((item) => covers(item.trace_id)).length;
+    return `<div class="card"><h2>Batch ${batch.number}</h2><p>${escapeHtml(batch.detail || "")}</p><p>${reviewed} of ${(batch.picks || []).length} traces have a note.</p>${rows}</div>`;
+  }).join("");
+  root.querySelectorAll(".prog-row").forEach((row) => {
+    row.onclick = () => {
+      const queueIndex = Number(row.dataset.q);
+      if (queueIndex >= 0) openQueue(queueIndex);
+      else showPick(findPick(row.dataset.trace), null);
+    };
+  });
+}
+
+function reviewedPicks() {
+  const seen = new Set();
+  const picks = [];
+  for (const batch of state.batches || []) {
+    for (const pick of batch.picks || []) {
+      if (seen.has(pick.trace_id)) continue;
+      seen.add(pick.trace_id);
+      picks.push(pick);
+    }
+  }
+  return picks;
+}
+
+function labelFor(traceId, mode) {
+  return state.labels.find((row) => row.trace_id === traceId && row.mode === mode) || null;
+}
+
+function noteDefaults() {
+  const pairs = [];
+  for (const mode of state.patterns.modes || []) {
+    for (const id of mode.created_from || []) {
+      const note = state.annotations.find((item) => item.id === id);
+      if (note) pairs.push({trace_id: note.trace_id, mode: mode.name, label: 1});
+    }
+    for (const item of mode.close_negatives || []) {
+      if (item.trace_id) pairs.push({trace_id: item.trace_id, mode: mode.name, label: 0});
+    }
+  }
+  return pairs;
+}
+
+async function setLabel(traceId, mode, label) {
+  const response = await fetch("/api/labels", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({trace_id: traceId, mode, label}),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || "save failed");
+  state.labels = state.labels.filter((row) => !(row.trace_id === traceId && row.mode === mode));
+  state.labels.push(body.label);
+}
+
+function renderLabels() {
+  const root = document.getElementById("labels");
+  const picks = reviewedPicks();
+  const modes = state.patterns.modes || [];
+  const total = picks.length * modes.length;
+  const decided = picks.reduce((sum, pick) => (
+    sum + modes.filter((mode) => labelFor(pick.trace_id, mode.name)).length
+  ), 0);
+  if (!picks.length || !modes.length) {
+    root.innerHTML = `<div class="card"><p>No review set to label.</p></div>`;
+    return;
+  }
+  const pick = picks[Math.min(state.labelCursor, picks.length - 1)];
+  const notes = state.annotations.filter((item) => item.trace_id === pick.trace_id || item.for_trace === pick.trace_id);
+  const noteHtml = notes.length
+    ? `<ul>${notes.map((item) => `<li>${escapeHtml(clip(item.note, 180))}</li>`).join("")}</ul>`
+    : `<p class="muted">No note on this trace.</p>`;
+  const rows = modes.map((mode) => {
+    const saved = labelFor(pick.trace_id, mode.name);
+    const presentOn = saved && saved.label === 1 ? " on" : "";
+    const absentOn = saved && saved.label === 0 ? " on" : "";
+    return `<div class="label-row"><div class="name"><strong>${escapeHtml(mode.title || mode.name)}</strong><div class="muted">${escapeHtml(mode.definition || "")}</div></div><button type="button" class="choice${presentOn}" data-label="1" data-mode="${escapeHtml(mode.name)}">Present</button><button type="button" class="choice${absentOn}" data-label="0" data-mode="${escapeHtml(mode.name)}">Absent</button></div>`;
+  }).join("");
+  root.innerHTML = `<div class="card"><h2>${escapeHtml(pick.scenario_id)}</h2><p class="muted">batch ${escapeHtml(pick.review_batch || "")} · ${escapeHtml(pick.reason || "")}</p><p>${decided} / ${total} judgments saved. A blank pair is still undecided. Present means this candidate's failure is in the trace.</p><p><button type="button" id="label-prev">Previous</button> <button type="button" id="label-next">Next</button> <button type="button" id="label-open">Open trace</button> <button type="button" id="label-notes">Save judgments from your notes</button></p>${noteHtml}${rows}</div>`;
+  root.querySelector("#label-prev").onclick = () => {
+    state.labelCursor = Math.max(0, state.labelCursor - 1);
+    renderLabels();
+  };
+  root.querySelector("#label-next").onclick = () => {
+    state.labelCursor = Math.min(picks.length - 1, state.labelCursor + 1);
+    renderLabels();
+  };
+  root.querySelector("#label-open").onclick = () => showPick(pick, null);
+  root.querySelector("#label-notes").onclick = async () => {
+    const pending = noteDefaults().filter((pair) => !labelFor(pair.trace_id, pair.mode));
+    for (const pair of pending) await setLabel(pair.trace_id, pair.mode, pair.label);
+    toast(`saved ${pending.length} judgments from your notes`);
+    renderLabels();
+  };
+  root.querySelectorAll(".choice").forEach((btn) => {
+    btn.onclick = async () => {
+      await setLabel(pick.trace_id, btn.dataset.mode, Number(btn.dataset.label));
+      renderLabels();
+    };
+  });
+}
+
+function showView(name) {
+  document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === name + "-view"));
+  document.querySelectorAll(".views button").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === name));
+  document.getElementById("session-nav").hidden = name !== "session";
+  if (name === "session") renderSession();
+  if (name === "taxonomy") renderTaxonomy();
+  if (name === "suggestions") renderSuggestions();
+  if (name === "progress") renderProgress();
+  if (name === "labels") renderLabels();
+}
+
+async function save(path, body) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("save failed");
+}
+
+let pending = null;
+
+document.getElementById("trace-body").addEventListener("mouseup", () => {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) return;
+  const text = sel.toString().trim();
+  if (!text) return;
+  const anchor = sel.anchorNode && sel.anchorNode.parentElement
+    ? sel.anchorNode.parentElement.closest(".annotatable")
+    : null;
+  if (!anchor) return;
+  const range = sel.getRangeAt(0);
+  if (!anchor.contains(range.commonAncestorContainer) && range.commonAncestorContainer !== anchor) return;
+  const span = document.createElement("span");
+  span.className = "hl pending-highlight";
+  try { range.surroundContents(span); }
+  catch (err) {
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+  }
+  pending = {trace_id: anchor.dataset.traceId, quote: text, span};
+  sel.removeAllRanges();
+  const rect = span.getBoundingClientRect();
+  const pop = document.getElementById("popover");
+  pop.style.display = "block";
+  pop.style.left = (window.scrollX + rect.left) + "px";
+  pop.style.top = (window.scrollY + rect.bottom + 6) + "px";
+  const input = document.getElementById("note-input");
+  input.value = "";
+  input.focus();
+});
+
+function closePopover() {
+  pending = null;
+  document.getElementById("popover").style.display = "none";
+}
+
+document.getElementById("note-input").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") commitAnnotation();
+  else if (event.key === "Escape") { closePopover(); renderSession(); }
+});
+document.addEventListener("mousedown", (event) => {
+  const pop = document.getElementById("popover");
+  if (pop.style.display === "block" && !pop.contains(event.target)) {
+    closePopover();
+    renderSession();
+  }
+});
+
+async function markNoFailure(traceId) {
+  if (state.annotations.some((a) => a.trace_id === traceId || a.for_trace === traceId)) return;
+  const item = state.queue.find((entry) => entry.trace_id === traceId);
+  state.annotations.push({
+    id: "a" + Date.now(),
+    trace_id: traceId,
+    for_trace: traceId,
+    quote: "",
+    note: "no failure observed",
+    ts: new Date().toISOString(),
+    author: "human",
+    batch: item ? item.batch : "",
+  });
+  await save("/api/annotations", state.annotations);
+  renderSession();
+  toast("recorded: no failure observed");
+}
+
+async function commitAnnotation() {
+  const note = document.getElementById("note-input").value.trim();
+  const ctx = pending;
+  if (!note || !ctx) { closePopover(); renderSession(); return; }
+  const item = state.queue.find((entry) => entry.trace_id === ctx.trace_id);
+  state.annotations.push({
+    id: "a" + Date.now(),
+    trace_id: ctx.trace_id,
+    for_trace: state.focusTrace || ctx.trace_id,
+    quote: ctx.quote,
+    note,
+    ts: new Date().toISOString(),
+    author: "human",
+    batch: item ? item.batch : "",
+  });
+  closePopover();
+  await save("/api/annotations", state.annotations);
+  renderSession();
+  toast("note saved");
+}
+
+async function deleteAnnotation(id) {
+  state.annotations = state.annotations.filter((a) => a.id !== id);
+  await save("/api/annotations", state.annotations);
+  renderSession();
+}
+
+async function acceptSuggestion(id) {
+  const suggestion = state.suggestions.find((s) => s.id === id);
+  if (!suggestion) return;
+  state.annotations.push({
+    id: "a" + Date.now(),
+    trace_id: suggestion.trace_id,
+    quote: suggestion.quote || "",
+    note: suggestion.note || suggestion.reason || "",
+    ts: new Date().toISOString(),
+    author: "accepted_suggestion",
+    source: "accepted_suggestion",
+  });
+  state.suggestions = state.suggestions.filter((s) => s.id !== id);
+  await save("/api/annotations", state.annotations);
+  await save("/api/suggestions", state.suggestions);
+  renderSession();
+  renderSuggestions();
+  toast("suggestion accepted");
+}
+
+async function rejectSuggestion(id) {
+  state.suggestions = state.suggestions.map((s) => s.id === id ? {...s, status: "rejected"} : s);
+  await save("/api/suggestions", state.suggestions);
+  renderSession();
+  renderSuggestions();
+  toast("suggestion rejected");
+}
+
+document.querySelectorAll(".views button").forEach((btn) => {
+  btn.onclick = () => showView(btn.dataset.view);
+});
+document.getElementById("prev").onclick = () => {
+  if (state.qi > 0) openQueue(state.qi - 1);
+};
+document.getElementById("next").onclick = () => {
+  if (state.qi < state.queue.length - 1) openQueue(state.qi + 1);
+};
+document.getElementById("jump").onsubmit = (event) => {
+  event.preventDefault();
+  const query = document.getElementById("scenario-input").value.trim();
+  const queueIndex = state.queue.findIndex((item) => item.scenario_id === query);
+  if (queueIndex >= 0) { openQueue(queueIndex); return; }
+  const index = state.sessions.findIndex((s) => s.scenario_id === query);
+  if (index < 0) { toast("no session " + query); return; }
+  state.cur = index;
+  state.focusTrace = null;
+  showView("session");
+};
+
+loadAll().then(() => {
+  const params = new URLSearchParams(location.search);
+  const scenario = params.get("scenario");
+  if (scenario) {
+    const queueIndex = state.queue.findIndex((item) => item.scenario_id === scenario);
+    if (queueIndex >= 0) openQueue(queueIndex);
+    else {
+      const index = state.sessions.findIndex((s) => s.scenario_id === scenario);
+      if (index >= 0) state.cur = index;
+      renderSession();
+    }
+    return;
+  }
+  if (state.queue.length) openQueue(0);
+  else renderSession();
+}).catch((err) => {
+  document.getElementById("trace-body").textContent = String(err);
+});
+</script>
+</body>
+</html>
