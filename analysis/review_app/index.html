@@ -583,11 +583,13 @@ function renderTaxonomy() {
   const blocks = modes.map((mode) => {
     const items = linked(mode).map((a) => `<li>${escapeHtml(clip(a.note, 160))}</li>`).join("") || `<li class="muted">no linked notes</li>`;
     const source = mode.requirement_source ? `<p class="muted">${escapeHtml(mode.requirement_source)}</p>` : "";
+    const evaluator = mode.evaluator_type ? `<p class="muted">Evaluator: ${escapeHtml(mode.evaluator_type)}</p>` : "";
+    const boundary = mode.boundary ? `<p class="muted">${escapeHtml(mode.boundary)}</p>` : "";
     const negatives = (mode.close_negatives || []).map((item) => item.scenario_id).filter(Boolean);
     const negativeLine = negatives.length
       ? `<p class="muted">Close negatives: ${escapeHtml(negatives.join(", "))}</p>`
       : "";
-    return `<article class="mode-block"><h3>${escapeHtml(mode.title || mode.name || "")}</h3><p class="mode-name muted">${escapeHtml(mode.name || "")} · ${escapeHtml(mode.status || "candidate")}</p><p>${escapeHtml(mode.definition || "")}</p>${source}${negativeLine}<ul>${items}</ul></article>`;
+    return `<article class="mode-block"><h3>${escapeHtml(mode.title || mode.name || "")}</h3><p class="mode-name muted">${escapeHtml(mode.name || "")} · ${escapeHtml(mode.status || "candidate")}</p><p>${escapeHtml(mode.definition || "")}</p>${source}${evaluator}${boundary}${negativeLine}<ul>${items}</ul></article>`;
   }).join("");
   const held = state.patterns.ungrouped || [];
   const heldHtml = held.length

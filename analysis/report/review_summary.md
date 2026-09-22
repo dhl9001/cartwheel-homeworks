@@ -38,14 +38,33 @@ After the refund search, `premature_refund_claim` was narrowed. A reply that say
 
 `full-079` was rejected as a search hit and kept as a close negative. `issue_refund` returned `auto_approved`, and the note on annotation `a1790093957517` was "no failure observed." Reporting a refund the tool has already approved is not this failure. `full-081` is the same shape. `full-007` is the third close negative: `issue_refund` returned `auto_approved` for $56, and the reply reports that status. `full-053` was also rejected: the reply says the dry bag is eligible and under $100, then asks before issuing anything. Nothing is left unsettled.
 
+## Confirmed modes
+
+Each mode has three close negatives, a boundary, and an evaluator. A code evaluator checks a trace field. A judge evaluator reads the reply.
+
+| Mode | Requirement | Evaluator | Close negatives |
+| --- | --- | --- | --- |
+| `narrated_method` | RESP-7 | judge | full-100, full-091, full-089 |
+| `cited_policy_id` | RESP-1 | code | full-079, full-070, full-033 |
+| `unasked_facts` | RESP-8 | judge | full-049, full-027, full-069 |
+| `unclear_target` | RESP-9 | judge | full-027, full-032, full-094 |
+| `unused_tool_call` | RESP-10 | judge | full-069, full-062, full-034 |
+| `premature_refund_claim` | RESP-6 | judge | full-079, full-081, full-007 |
+| `repeated_fact` | RESP-11 | judge | full-063, full-035, full-038 |
+| `escalated_support_user` | ESC-5 | code | full-032, full-034, full-031 |
+
+`cited_policy_id` is a code check for a policy document id in the user-visible reply. `escalated_support_user` is a code check for a support user plus `escalate_to_human`. The other six depend on what the user asked and what the reply claims, so they are judges.
+
 ## Specification
 
-Two gaps found in the notes are now written in `SPEC.md`. The running system prompt was not changed.
+The gaps found in the notes are written in `SPEC.md`. The running system prompt was not changed.
 
-`RESP-1` now forbids naming a policy document id in a user-visible reply. The motivating note is `a1790085259356` on `full-007`, quote `cw-refunds`, note "Don't cite internal doc name." Close negatives are `full-079`, `full-070`, and `full-033`: each states the 5–10 day timing or the $100 threshold and does not name a document id.
+`RESP-1` forbids naming a policy document id. The motivating note is `a1790085259356` on `full-007`. `RESP-6` forbids stating refund eligibility while the case is still unsettled. The motivating note is `a1790094260938` on `full-066`. `RESP-7` through `RESP-11` cover narrating the method, unasked facts, an unclear target, an unused tool call, and a repeated fact. `ESC-5` covers opening a ticket for someone who is already support. The motivating notes are `a1790085679260`, `a1790084289463`, `a1790085225281`, `a1790085152749`, `a1790091475675`, and `a1790090517628`.
 
-`RESP-6` forbids stating refund eligibility, or that a refund is being submitted, while human review, an open policy question, or a disagreeing order record is still unresolved. The motivating note is `a1790094260938` on `full-066`, note "dont confirm eligible if it needs human review first." `RESP-2` still covers claiming success before the tool reports success.
+## AgentDebug
 
-The eight candidates are still candidates. An evaluator type is not chosen yet.
+AgentDebug (arXiv:2509.25370) groups failures into memory, reflection, planning, action, and system. `unused_tool_call` is the nearest planning overlap. `premature_refund_claim` is the nearest reflection overlap. The other six modes are about what the reply tells the user, and AgentDebug does not name them. No mode was added from that taxonomy. The reviewed notes do not support a separate memory, action-format, or tool-crash mode. The permission-denial wording on `full-077` stayed in `narrated_method`.
 
-The same judgments are in `analysis/review_app/state/labels/` and `analysis/state/labels/`. They were not written to Langfuse: the `langfuse` package is not installed in `.venv`, and `uv sync` fails while building `cbor2`. The environment variables `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, and `LANGFUSE_HOST` are set in `.env`.
+## Records
+
+The same judgments are in `analysis/review_app/state/labels/` and `analysis/state/labels/`. They were not written to Langfuse: the `langfuse` package is not installed in `.venv`, and `uv sync` fails while building `cbor2`. The taxonomy, notes, and sample manifest used for this review stay in `analysis/review_app/state/`. The course demo files `analysis/state/patterns.json` and `analysis/state/annotations.json` were left in place because the existing tests read them.
