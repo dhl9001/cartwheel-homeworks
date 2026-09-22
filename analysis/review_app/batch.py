@@ -32,7 +32,10 @@ def traces_from_sessions(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]
             rows.append(
                 {
                     "id": turn["trace_id"],
-                    "meta": {"scenario_id": session.get("scenario_id") or ""},
+                    "meta": {
+                        "scenario_id": session.get("scenario_id") or "",
+                        "role": session.get("role") or "",
+                    },
                     "features": {
                         "turn_count": 1,
                         "tool_call_count": len(names),
@@ -177,4 +180,54 @@ def first_reading_batch(traces: list[dict[str, Any]], seed: int = 7) -> list[dic
                 "scenario_id": (trace.get("meta") or {}).get("scenario_id") or "",
             }
         )
+    return picks
+
+
+def role_reading_batch(
+    traces: list[dict[str, Any]],
+    exclude_ids: set[str],
+    seed: int = 7,
+    shopper_n: int = 16,
+) -> list[dict[str, str]]:
+    """30 traces stratified by user role, excluding traces already reviewed.
+
+    Merchant and support traces left after the exclusion are all included.
+    The shopper fill is a uniform draw. Reading order alternates roles.
+    """
+    excluded = set(exclude_ids)
+    groups: dict[str, list[dict[str, Any]]] = {"shopper": [], "merchant": [], "support": []}
+    for trace in traces:
+        if trace.get("id") in excluded:
+            continue
+        role = str((trace.get("meta") or {}).get("role") or "")
+        if role in groups:
+            groups[role].append(trace)
+    for role, members in groups.items():
+        members.sort(key=lambda trace: str((trace.get("meta") or {}).get("scenario_id") or ""))
+    if len(groups["shopper"]) < shopper_n:
+        raise ValueError(f"need {shopper_n} shopper traces, found {len(groups['shopper'])}")
+    rng = random.Random(seed)
+    chosen = {
+        "shopper": rng.sample(groups["shopper"], shopper_n),
+        "merchant": list(groups["merchant"]),
+        "support": list(groups["support"]),
+    }
+    for members in chosen.values():
+        members.sort(key=lambda trace: str((trace.get("meta") or {}).get("scenario_id") or ""))
+    picks: list[dict[str, str]] = []
+    while any(chosen.values()):
+        for role in ("shopper", "merchant", "support"):
+            if not chosen[role]:
+                continue
+            trace = chosen[role].pop(0)
+            picks.append(
+                {
+                    "trace_id": trace["id"],
+                    "scenario_id": (trace.get("meta") or {}).get("scenario_id") or "",
+                    "reason": f"role {role}",
+                    "batch": "role",
+                    "review_batch": "2",
+                    "role": role,
+                }
+            )
     return picks

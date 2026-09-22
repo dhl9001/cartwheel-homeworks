@@ -231,6 +231,8 @@
 const state = {
   sessions: [],
   queue: [],
+  queueBatch: 2,
+  batches: [],
   qi: 0,
   focusTrace: null,
   annotations: [],
@@ -274,6 +276,8 @@ async function loadAll() {
   ]);
   state.sessions = sessions.sessions || [];
   state.queue = sessions.queue || [];
+  state.queueBatch = sessions.queue_batch || 2;
+  state.batches = sessions.batches || [];
   state.annotations = Array.isArray(annotations) ? annotations : [];
   state.suggestions = Array.isArray(suggestions) ? suggestions : [];
   state.patterns = patterns && Array.isArray(patterns.modes) ? patterns : {modes: []};
@@ -299,21 +303,33 @@ function queueItem() {
   return state.queue[state.qi] || null;
 }
 
+function findPick(traceId) {
+  for (const batch of state.batches || []) {
+    const found = (batch.picks || []).find((pick) => pick.trace_id === traceId);
+    if (found) return found;
+  }
+  return (state.queue || []).find((pick) => pick.trace_id === traceId) || null;
+}
+
 function renderChrome() {
   const session = current();
   const pos = document.getElementById("pos");
   pos.textContent = state.queue.length ? `${state.qi + 1} / ${state.queue.length}` : "0 / 0";
   const reviewed = state.queue.filter((item) => covers(item.trace_id)).length;
   document.getElementById("counts").textContent =
-    `${reviewed} / ${state.queue.length} batch 1 traces noted`;
+    `${reviewed} / ${state.queue.length} batch ${state.queueBatch} traces noted`;
   const head = document.getElementById("session-head");
   if (!session) {
     head.innerHTML = '<span class="meta">no sessions</span>';
     return;
   }
-  const focus = queueItem();
-  const batch = focus && session.turns.some((turn) => turn.trace_id === focus.trace_id)
-    ? `<span class="flag">batch 1 · ${escapeHtml(focus.reason)}</span>`
+  const inSession = new Set(session.turns.map((turn) => turn.trace_id));
+  const focusId = inSession.has(state.focusTrace)
+    ? state.focusTrace
+    : (queueItem() && inSession.has(queueItem().trace_id) ? queueItem().trace_id : null);
+  const pick = focusId ? findPick(focusId) : null;
+  const batch = pick
+    ? `<span class="flag">batch ${escapeHtml(pick.review_batch || state.queueBatch)} · ${escapeHtml(pick.reason)}</span>`
     : "";
   const knownRole = ["shopper", "merchant", "support"].includes(session.role) ? session.role : "";
   head.innerHTML =
@@ -582,10 +598,9 @@ function renderSuggestions() {
   root.querySelectorAll("[data-reject]").forEach((btn) => { btn.onclick = () => rejectSuggestion(btn.dataset.reject); });
 }
 
-function openQueue(index) {
-  const item = state.queue[index];
+function showPick(item, queueIndex) {
   if (!item) return;
-  state.qi = index;
+  if (queueIndex != null && queueIndex >= 0) state.qi = queueIndex;
   state.focusTrace = item.trace_id;
   const sessionIndex = state.sessions.findIndex((session) =>
     session.turns.some((turn) => turn.trace_id === item.trace_id));
@@ -595,18 +610,32 @@ function openQueue(index) {
   if (node) node.scrollIntoView({block: "start"});
 }
 
+function openQueue(index) {
+  showPick(state.queue[index], index);
+}
+
 function renderProgress() {
   const root = document.getElementById("progress");
-  const rows = state.queue.map((item, index) => {
-    const mark = covers(item.trace_id)
-      ? `<span class="done">noted</span>`
-      : `<span class="muted">unread</span>`;
-    return `<div class="prog-row" data-index="${index}"><span class="mono">${escapeHtml(item.scenario_id)}</span><span>${escapeHtml(item.reason)}</span>${mark}</div>`;
+  const batches = state.batches.length
+    ? state.batches
+    : [{number: state.queueBatch, detail: "", picks: state.queue}];
+  root.innerHTML = batches.map((batch) => {
+    const rows = (batch.picks || []).map((item) => {
+      const mark = covers(item.trace_id)
+        ? `<span class="done">noted</span>`
+        : `<span class="muted">unread</span>`;
+      const queueIndex = state.queue.findIndex((entry) => entry.trace_id === item.trace_id);
+      return `<div class="prog-row" data-trace="${escapeHtml(item.trace_id)}" data-q="${queueIndex}"><span class="mono">${escapeHtml(item.scenario_id)}</span><span>${escapeHtml(item.reason)}</span>${mark}</div>`;
+    }).join("");
+    const reviewed = (batch.picks || []).filter((item) => covers(item.trace_id)).length;
+    return `<div class="card"><h2>Batch ${batch.number}</h2><p>${escapeHtml(batch.detail || "")}</p><p>${reviewed} of ${(batch.picks || []).length} traces have a note.</p>${rows}</div>`;
   }).join("");
-  const reviewed = state.queue.filter((item) => covers(item.trace_id)).length;
-  root.innerHTML = `<div class="card"><h2>Batch 1</h2><p>${reviewed} of ${state.queue.length} traces have a note. Fifteen are a uniform sample. Fifteen are cluster representatives. A trace with no note is still unread.</p>${rows}</div>`;
   root.querySelectorAll(".prog-row").forEach((row) => {
-    row.onclick = () => openQueue(Number(row.dataset.index));
+    row.onclick = () => {
+      const queueIndex = Number(row.dataset.q);
+      if (queueIndex >= 0) openQueue(queueIndex);
+      else showPick(findPick(row.dataset.trace), null);
+    };
   });
 }
 

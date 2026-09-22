@@ -21,7 +21,7 @@ REPO = HERE.parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from analysis.review_app.batch import first_reading_batch, traces_from_sessions
+from analysis.review_app.batch import first_reading_batch, role_reading_batch, traces_from_sessions
 from analysis.review_app.sessions import build_sessions
 STATE_DIR = HERE / "state"
 DEFAULT_EXPORT = REPO / "traces" / "support_traces.json"
@@ -63,11 +63,17 @@ def load_sessions(export_path: Path) -> list[dict[str, Any]]:
 
 
 class ReviewApp:
-    """Process-wide session list, the batch-1 queue, and note files."""
+    """Process-wide session list, the active review queue, and note files."""
 
-    def __init__(self, sessions: list[dict[str, Any]], queue: list[dict[str, str]]) -> None:
+    def __init__(
+        self,
+        sessions: list[dict[str, Any]],
+        queue: list[dict[str, str]],
+        batches: list[dict[str, Any]],
+    ) -> None:
         self.sessions = sessions
         self.queue = queue
+        self.batches = batches
 
 
 def make_handler(app: ReviewApp) -> type[BaseHTTPRequestHandler]:
@@ -103,7 +109,14 @@ def make_handler(app: ReviewApp) -> type[BaseHTTPRequestHandler]:
                 self.wfile.write(html)
                 return
             if path == "/api/sessions":
-                self._send_json({"sessions": app.sessions, "queue": app.queue})
+                self._send_json(
+                    {
+                        "sessions": app.sessions,
+                        "queue": app.queue,
+                        "queue_batch": 2,
+                        "batches": app.batches,
+                    }
+                )
                 return
             if path in API_FILES:
                 self._send_json(_read_json(API_FILES[path], API_DEFAULTS[path]))
@@ -134,16 +147,27 @@ def main() -> None:
     args = parser.parse_args()
 
     sessions = load_sessions(args.export)
-    queue = first_reading_batch(traces_from_sessions(sessions))
-    _write_json(
-        STATE_DIR / "sample_manifest.json",
-        {"batch": 1, "seed": 7, "picks": queue},
-    )
-    app = ReviewApp(sessions, queue)
+    traces = traces_from_sessions(sessions)
+    batch1 = [{**pick, "review_batch": "1"} for pick in first_reading_batch(traces)]
+    batch2 = role_reading_batch(traces, {pick["trace_id"] for pick in batch1})
+    batches = [
+        {
+            "number": 1,
+            "detail": "Fifteen uniform traces, then fifteen cluster representatives.",
+            "picks": batch1,
+        },
+        {
+            "number": 2,
+            "detail": "User role, chosen before outcomes: 16 shopper, every remaining merchant, every remaining support.",
+            "picks": batch2,
+        },
+    ]
+    _write_json(STATE_DIR / "sample_manifest.json", {"seed": 7, "batches": batches})
+    app = ReviewApp(sessions, batch2, batches)
     server = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     turns = sum(len(session["turns"]) for session in sessions)
     print(f"review app on http://{args.host}:{args.port}/")
-    print(f"{len(sessions)} sessions, {turns} traces, batch 1 has {len(queue)} traces")
+    print(f"{len(sessions)} sessions, {turns} traces, batch 2 has {len(batch2)} traces")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

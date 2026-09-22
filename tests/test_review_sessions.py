@@ -195,3 +195,24 @@ def test_first_batch_is_thirty_distinct_traces() -> None:
     assert [pick["batch"] for pick in picks].count("cluster") == 15
     assert picks[0]["reason"] == "uniform sample"
     assert picks[15]["reason"].startswith("cluster ")
+
+
+def test_role_batch_covers_each_role_without_reusing_batch_one() -> None:
+    from analysis.review_app.batch import first_reading_batch, role_reading_batch, traces_from_sessions
+
+    export_path = Path(__file__).resolve().parents[1] / "traces" / "support_traces.json"
+    export = json.loads(export_path.read_text())
+    traces = traces_from_sessions(build_sessions(export))
+    batch1 = first_reading_batch(traces)
+    picks = role_reading_batch(traces, {pick["trace_id"] for pick in batch1})
+    ids = [pick["trace_id"] for pick in picks]
+    assert len(ids) == 30
+    assert len(set(ids)) == 30
+    assert not (set(ids) & {pick["trace_id"] for pick in batch1})
+    counts = {}
+    for pick in picks:
+        counts[pick["role"]] = counts.get(pick["role"], 0) + 1
+    assert counts == {"shopper": 16, "merchant": 6, "support": 8}
+    assert picks[0]["reason"] == "role shopper"
+    assert picks[1]["reason"] == "role merchant"
+    assert picks[2]["reason"] == "role support"
