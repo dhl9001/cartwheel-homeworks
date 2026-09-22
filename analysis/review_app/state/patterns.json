@@ -304,8 +304,20 @@
       "scenario_id": "full-011",
       "note": "Strange ordering of communication - this hsould come first to confirm product -> then confirm cancel is possible",
       "reason": "One note. The change is the order of sentences in one reply. It stays separate from asking before an unclear target."
+    },
+    {
+      "id": "a1790095606287",
+      "scenario_id": "full-056",
+      "note": "Agent should calculate todays' date vs. shipped date and escalte to human if needed otherwise tell user to wait",
+      "reason": "One note from the final 15. The agent would compare the ship date with today, then escalate or tell the user to wait. It stayed ungrouped."
     }
   ],
+  "stability": {
+    "batch": 4,
+    "traces": 15,
+    "previously_unseen_notes": 1,
+    "new_modes": 0
+  },
   "revisions": [
     {
       "at": "2026-09-22T16:46:00+01:00",
@@ -314,6 +326,10 @@
     {
       "at": "2026-09-22T17:38:00+01:00",
       "change": "After the refund search, tightened premature_refund_claim so it covers stating eligibility or submitting a refund while human review, policy, or the order record is still unresolved. full-079 and full-081 are close negatives. full-073 joined unasked_facts."
+    },
+    {
+      "at": "2026-09-22T17:48:00+01:00",
+      "change": "The final 15 uniform traces produced one previously unseen note, on full-056. It stayed ungrouped. That is not several new modes, so no extra review batch was added."
     }
   ]
 }
