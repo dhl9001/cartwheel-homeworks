@@ -1,20 +1,100 @@
-{
-  "mode": "premature_refund_claim",
-  "note": "Depth-search hits that were reviewed and rejected. A rejected hit is not a label.",
-  "rejected": [
-    {"scenario_id": "full-039", "reason": "No headlamp order was found. The reply does not state that a refund is being submitted while the case is unsettled."},
-    {"scenario_id": "full-043", "reason": "The reply says the order is not refund-eligible."},
-    {"scenario_id": "full-053", "reason": "The reply says the order is eligible and under $100, then asks before issuing anything."},
-    {"scenario_id": "full-083", "reason": "The reply says the order is eligible and under $100, then asks before issuing anything."},
-    {"scenario_id": "full-084", "reason": "The order is already marked refunded. The reply does not claim a new refund is available."},
-    {"scenario_id": "full-086", "reason": "The user asked to cancel a delivered order. The reply asks before submitting a return."},
-    {"scenario_id": "full-087", "reason": "The reply cannot identify the item. It was not accepted as this failure."},
-    {"scenario_id": "full-098", "reason": "The refund was already auto-approved. The follow-up asks about an opened item."},
-    {"scenario_id": "full-092", "reason": "The reply says the shipped order is not eligible for an automatic refund."},
-    {"scenario_id": "full-022", "reason": "The request is outside Cartwheel support."},
-    {"scenario_id": "full-023", "reason": "The request is outside Cartwheel support."},
-    {"scenario_id": "full-044", "reason": "The request is an account change, which the reply refuses."},
-    {"scenario_id": "full-055", "reason": "The reply discusses the return window and was not accepted as this failure."},
-    {"scenario_id": "full-096", "reason": "The reply discusses store policy and the amount, and was not accepted as this failure."}
-  ]
-}
+[
+  {
+    "id": "sugg-refund-01",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-039",
+    "note": "No headlamp order was found. The reply does not state that a refund is being submitted while the case is unsettled.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-02",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-043",
+    "note": "The reply says the order is not refund-eligible.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-03",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-053",
+    "note": "The reply says the order is eligible and under $100, then asks before issuing anything.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-04",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-083",
+    "note": "The reply says the order is eligible and under $100, then asks before issuing anything.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-05",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-084",
+    "note": "The order is already marked refunded. The reply does not claim a new refund is available.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-06",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-086",
+    "note": "The user asked to cancel a delivered order. The reply asks before submitting a return.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-07",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-087",
+    "note": "The reply cannot identify the item. It was not accepted as this failure.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-08",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-098",
+    "note": "The refund was already auto-approved. The follow-up asks about an opened item.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-09",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-092",
+    "note": "The reply says the shipped order is not eligible for an automatic refund.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-10",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-022",
+    "note": "The request is outside Cartwheel support.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-11",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-023",
+    "note": "The request is outside Cartwheel support.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-12",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-044",
+    "note": "The request is an account change, which the reply refuses.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-13",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-055",
+    "note": "The reply discusses the return window and was not accepted as this failure.",
+    "status": "rejected"
+  },
+  {
+    "id": "sugg-refund-14",
+    "mode": "premature_refund_claim",
+    "scenario_id": "full-096",
+    "note": "The reply discusses store policy and the amount, and was not accepted as this failure.",
+    "status": "rejected"
+  }
+]
