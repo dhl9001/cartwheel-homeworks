@@ -67,4 +67,4 @@ AgentDebug (arXiv:2509.25370) groups failures into memory, reflection, planning,
 
 ## Records
 
-The same judgments are in `analysis/review_app/state/labels/` and `analysis/state/labels/`. They were not written to Langfuse: the `langfuse` package is not installed in `.venv`, and `uv sync` fails while building `cbor2`. The taxonomy, notes, and sample manifest used for this review stay in `analysis/review_app/state/`. The course demo files `analysis/state/patterns.json` and `analysis/state/annotations.json` were left in place because the existing tests read them.
+The same judgments are in `analysis/review_app/state/labels/` and `analysis/state/labels/`. Each judgment is also a numeric Langfuse score on the trace: 1 means the failure is present and 0 means it is absent. The 100-trace sample manifest is `analysis/state/sample_manifest.json`. The taxonomy, notes, and rejected search hits used for this review stay in `analysis/review_app/state/`. The course demo files `analysis/state/patterns.json` and `analysis/state/annotations.json` were left in place because the structural tests read the demo taxonomy.
