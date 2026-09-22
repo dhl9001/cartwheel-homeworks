@@ -216,3 +216,35 @@ def test_role_batch_covers_each_role_without_reusing_batch_one() -> None:
     assert picks[0]["reason"] == "role shopper"
     assert picks[1]["reason"] == "role merchant"
     assert picks[2]["reason"] == "role support"
+
+
+def test_refund_search_batch_is_twenty_five_unseen_traces() -> None:
+    from analysis.review_app.batch import (
+        first_reading_batch,
+        refund_search_batch,
+        role_reading_batch,
+        traces_from_sessions,
+    )
+
+    export_path = Path(__file__).resolve().parents[1] / "traces" / "support_traces.json"
+    export = json.loads(export_path.read_text())
+    traces = traces_from_sessions(build_sessions(export))
+    batch1 = first_reading_batch(traces)
+    batch2 = role_reading_batch(traces, {pick["trace_id"] for pick in batch1})
+    reviewed = {pick["trace_id"] for pick in batch1} | {pick["trace_id"] for pick in batch2}
+    picks = refund_search_batch(traces, reviewed)
+    ids = [pick["trace_id"] for pick in picks]
+    assert len(ids) == 25
+    assert len(set(ids)) == 25
+    assert not (set(ids) & reviewed)
+    counts = {}
+    for pick in picks:
+        counts[pick["reason"]] = counts.get(pick["reason"], 0) + 1
+    assert counts == {
+        "issue_refund called": 4,
+        "reply mentions a refund action": 14,
+        "user asked about a refund": 1,
+        "refund mentioned, no action words": 6,
+    }
+    assert picks[0]["reason"] == "issue_refund called"
+    assert picks[0]["mode"] == "premature_refund_claim"

@@ -21,7 +21,12 @@ REPO = HERE.parents[1]
 if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
-from analysis.review_app.batch import first_reading_batch, role_reading_batch, traces_from_sessions
+from analysis.review_app.batch import (
+    first_reading_batch,
+    refund_search_batch,
+    role_reading_batch,
+    traces_from_sessions,
+)
 from analysis.review_app.sessions import build_sessions
 STATE_DIR = HERE / "state"
 DEFAULT_EXPORT = REPO / "traces" / "support_traces.json"
@@ -70,10 +75,12 @@ class ReviewApp:
         sessions: list[dict[str, Any]],
         queue: list[dict[str, str]],
         batches: list[dict[str, Any]],
+        queue_batch: int,
     ) -> None:
         self.sessions = sessions
         self.queue = queue
         self.batches = batches
+        self.queue_batch = queue_batch
 
 
 def make_handler(app: ReviewApp) -> type[BaseHTTPRequestHandler]:
@@ -113,7 +120,7 @@ def make_handler(app: ReviewApp) -> type[BaseHTTPRequestHandler]:
                     {
                         "sessions": app.sessions,
                         "queue": app.queue,
-                        "queue_batch": 2,
+                        "queue_batch": app.queue_batch,
                         "batches": app.batches,
                     }
                 )
@@ -150,6 +157,8 @@ def main() -> None:
     traces = traces_from_sessions(sessions)
     batch1 = [{**pick, "review_batch": "1"} for pick in first_reading_batch(traces)]
     batch2 = role_reading_batch(traces, {pick["trace_id"] for pick in batch1})
+    reviewed = {pick["trace_id"] for pick in batch1} | {pick["trace_id"] for pick in batch2}
+    batch3 = refund_search_batch(traces, reviewed)
     batches = [
         {
             "number": 1,
@@ -161,13 +170,18 @@ def main() -> None:
             "detail": "User role, chosen before outcomes: 16 shopper, every remaining merchant, every remaining support.",
             "picks": batch2,
         },
+        {
+            "number": 3,
+            "detail": "Depth search for premature_refund_claim: issue_refund calls, refund-action replies, and refund mentions with no action words. The filter is not a label.",
+            "picks": batch3,
+        },
     ]
     _write_json(STATE_DIR / "sample_manifest.json", {"seed": 7, "batches": batches})
-    app = ReviewApp(sessions, batch2, batches)
+    app = ReviewApp(sessions, batch3, batches, queue_batch=3)
     server = ThreadingHTTPServer((args.host, args.port), make_handler(app))
     turns = sum(len(session["turns"]) for session in sessions)
     print(f"review app on http://{args.host}:{args.port}/")
-    print(f"{len(sessions)} sessions, {turns} traces, batch 2 has {len(batch2)} traces")
+    print(f"{len(sessions)} sessions, {turns} traces, batch 3 has {len(batch3)} traces")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

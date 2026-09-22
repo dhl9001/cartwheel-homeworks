@@ -14,7 +14,13 @@ from __future__ import annotations
 
 import math
 import random
+import re
 from typing import Any
+
+_REFUND_ACTION = re.compile(
+    r"\b(?:going to|request|processed|processing|complete|completed|approved|issued|submitting)\b",
+    re.IGNORECASE,
+)
 
 N_UNIFORM = 15
 N_CLUSTER = 15
@@ -32,6 +38,9 @@ def traces_from_sessions(sessions: list[dict[str, Any]]) -> list[dict[str, Any]]
             rows.append(
                 {
                     "id": turn["trace_id"],
+                    "user_text": turn.get("user_text") or "",
+                    "assistant_text": turn.get("assistant_text") or "",
+                    "tool_names": names,
                     "meta": {
                         "scenario_id": session.get("scenario_id") or "",
                         "role": session.get("role") or "",
@@ -230,4 +239,65 @@ def role_reading_batch(
                     "role": role,
                 }
             )
+    return picks
+
+
+def _scenario(trace: dict[str, Any]) -> str:
+    return str((trace.get("meta") or {}).get("scenario_id") or "")
+
+
+def _refund_pick(trace: dict[str, Any], reason: str) -> dict[str, str]:
+    return {
+        "trace_id": trace["id"],
+        "scenario_id": _scenario(trace),
+        "reason": reason,
+        "batch": "refund_search",
+        "review_batch": "3",
+        "mode": "premature_refund_claim",
+    }
+
+
+def refund_search_batch(
+    traces: list[dict[str, Any]],
+    exclude_ids: set[str],
+    seed: int = 7,
+    boundary_n: int = 6,
+) -> list[dict[str, str]]:
+    """25 unread traces retrieved for premature_refund_claim.
+
+    The slices are a deterministic filter, not a label. issue_refund traces
+    come first, then replies that pair "refund" with an action word, then a
+    user refund question, then a uniform draw of other refund mentions.
+    """
+    excluded = set(exclude_ids)
+    tool: list[dict[str, Any]] = []
+    claim: list[dict[str, Any]] = []
+    asked: list[dict[str, Any]] = []
+    quiet: list[dict[str, Any]] = []
+    for trace in traces:
+        if trace.get("id") in excluded:
+            continue
+        user = str(trace.get("user_text") or "")
+        assistant = str(trace.get("assistant_text") or "")
+        tools = trace.get("tool_names") or []
+        mentions = "refund" in f"{user}\n{assistant}".lower()
+        if "issue_refund" in tools:
+            tool.append(trace)
+        elif "refund" in assistant.lower() and _REFUND_ACTION.search(assistant):
+            claim.append(trace)
+        elif "refund" in user.lower():
+            asked.append(trace)
+        elif mentions:
+            quiet.append(trace)
+    for group in (tool, claim, asked, quiet):
+        group.sort(key=_scenario)
+    if len(quiet) < boundary_n:
+        raise ValueError(f"need {boundary_n} boundary traces, found {len(quiet)}")
+    boundary = random.Random(seed).sample(quiet, boundary_n)
+    boundary.sort(key=_scenario)
+    picks: list[dict[str, str]] = []
+    picks.extend(_refund_pick(trace, "issue_refund called") for trace in tool)
+    picks.extend(_refund_pick(trace, "reply mentions a refund action") for trace in claim)
+    picks.extend(_refund_pick(trace, "user asked about a refund") for trace in asked)
+    picks.extend(_refund_pick(trace, "refund mentioned, no action words") for trace in boundary)
     return picks

@@ -462,6 +462,212 @@
           "role": "shopper"
         }
       ]
+    },
+    {
+      "number": 3,
+      "detail": "Depth search for premature_refund_claim: issue_refund calls, refund-action replies, and refund mentions with no action words. The filter is not a label.",
+      "picks": [
+        {
+          "trace_id": "fa40a4e2c246c574daf5f26a3540e371",
+          "scenario_id": "full-070",
+          "reason": "issue_refund called",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "45cd21196bed1e4db29545ee4fb62004",
+          "scenario_id": "full-079",
+          "reason": "issue_refund called",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "5aa1424fdc17ac65453537981f6401c8",
+          "scenario_id": "full-081",
+          "reason": "issue_refund called",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "76f849d225d9529e4b2bf670b8dbbd43",
+          "scenario_id": "full-082",
+          "reason": "issue_refund called",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "4f6f06088fe2bc0f0b21fc757d0c12be",
+          "scenario_id": "full-037",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "057df39a6791284faf11390bfa4c03b0",
+          "scenario_id": "full-039",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "b42eb1f87659f18cba741140df8b3264",
+          "scenario_id": "full-043",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "0a89752cf9fb091e6b242bcd5acf69e6",
+          "scenario_id": "full-053",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "247048e0f4009040f21be395dcc11eab",
+          "scenario_id": "full-059",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "01fdb9f9a4a40c8ac10ce99778e0cd30",
+          "scenario_id": "full-066",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "b9dcd6f163e293ba284667d94e89c084",
+          "scenario_id": "full-083",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "57448adadf20cc401589000f86e9efe5",
+          "scenario_id": "full-084",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "a0ef97d283c8de8bedebc5c9cacafbae",
+          "scenario_id": "full-086",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "69b88c7e2e89ea500e719a91fb48b2e4",
+          "scenario_id": "full-087",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "70a555857738eb20382c25bb495c04db",
+          "scenario_id": "full-089",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "8af5a536473c3b02e311ed09e3409760",
+          "scenario_id": "full-089",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "ef7942dc762a4cac3ec0a0e6297f408f",
+          "scenario_id": "full-094",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "1d1c38f586a39e71d31bca9e49d82bea",
+          "scenario_id": "full-098",
+          "reason": "reply mentions a refund action",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "d88a78733e6ccf1a5e5582be045dd9f7",
+          "scenario_id": "full-092",
+          "reason": "user asked about a refund",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "01e428325442e5b5e55d972c007448b4",
+          "scenario_id": "full-022",
+          "reason": "refund mentioned, no action words",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "cd9e3a93fb2c0b56377891fa3cc42a15",
+          "scenario_id": "full-023",
+          "reason": "refund mentioned, no action words",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "f3fb6862895cc7edea1dde6a1f2cd60a",
+          "scenario_id": "full-044",
+          "reason": "refund mentioned, no action words",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "b32009dc0175a8dba8bd5f20590fde05",
+          "scenario_id": "full-055",
+          "reason": "refund mentioned, no action words",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "56a3af89fae6e68c1b8a385a3ff588ca",
+          "scenario_id": "full-073",
+          "reason": "refund mentioned, no action words",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        },
+        {
+          "trace_id": "3bde02ace88eef60092635c7ec2c7fa0",
+          "scenario_id": "full-096",
+          "reason": "refund mentioned, no action words",
+          "batch": "refund_search",
+          "review_batch": "3",
+          "mode": "premature_refund_claim"
+        }
+      ]
     }
   ]
 }
