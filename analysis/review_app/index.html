@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<!--
+  Homework 4 review interface.
+
+  One session is one scroll. User text, a one-line tool outcome, and the
+  final assistant reply stay open. Arguments, raw tool JSON, and model
+  steps open on click. Notes attach to the trace id of the turn that
+  contains the selected text.
+
+  Role color, margin notes, and the separate suggestion treatment follow
+  the reference interface in analysis/ui/index.html.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cartwheel review</title>
+<style>
+  :root {
+    --role-user: #2563eb;
+    --role-assistant: #059669;
+    --role-tool: #b45309;
+    --bg: #f7f7f8;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --hl: #fde68a;
+    --hl-pending: #fef08a;
+    --sugg: #ddd6fe;
+    --sugg-border: #7c3aed;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  code, pre, .mono { font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace; }
+  header.app {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 18px; background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 40;
+  }
+  header.app h1 { font-size: 15px; margin: 0; font-weight: 700; }
+  header.app h1 .dim { color: var(--muted); font-weight: 400; }
+  .views { display: flex; gap: 4px; }
+  .views button, .nav button, .jump button, .queue-tools button, .mnote button {
+    border: 1px solid var(--line); background: var(--bg);
+    border-radius: 6px; cursor: pointer; font: inherit;
+  }
+  .views button { padding: 6px 12px; }
+  .views button.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .spacer { flex: 1; }
+  .nav { display: flex; gap: 4px; align-items: center; }
+  .nav button { width: 30px; height: 30px; }
+  .pos, .counts { color: var(--muted); font-size: 13px; }
+  .jump { display: flex; gap: 4px; align-items: center; }
+  .jump input {
+    border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px;
+    font: inherit; width: 110px;
+  }
+  .view { display: none; }
+  .view.active { display: block; }
+  .session-head {
+    position: sticky; top: 53px; z-index: 30;
+    background: var(--bg); max-width: 980px; margin: 0 auto;
+    padding: 14px 0 10px; border-bottom: 1px solid var(--line);
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: baseline;
+  }
+  .session-head .scenario { font-weight: 700; }
+  .session-head .meta { color: var(--muted); font-size: 13px; }
+  #session-view { padding: 8px 18px 80px; }
+  .trace-wrap {
+    display: flex; gap: 24px; max-width: 980px; margin: 16px auto 0;
+    align-items: flex-start;
+  }
+  .trace-body { flex: 1; max-width: 720px; }
+  .margin-col { width: 240px; position: relative; flex-shrink: 0; }
+  .system { margin: 14px auto 0; max-width: 980px; color: var(--muted); font-size: 13px; }
+  .system pre {
+    white-space: pre-wrap; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; max-height: 240px; overflow: auto;
+  }
+  .turn {
+    border: 1px solid var(--line); border-radius: 8px; background: var(--panel);
+    margin-bottom: 28px; overflow: hidden;
+  }
+  .turn-meta {
+    padding: 8px 14px; font-size: 12px; color: var(--muted);
+    border-bottom: 1px solid var(--line); background: #fafafa;
+  }
+  .msg { padding: 12px 14px; border-left: 4px solid var(--line); }
+  .msg + .tool-group, .tool-group + .msg, .msg + .msg { border-top: 1px solid var(--line); }
+  .msg .role {
+    font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .msg.user { border-left-color: var(--role-user); }
+  .msg.user .role { color: var(--role-user); }
+  .msg.assistant { border-left-color: var(--role-assistant); }
+  .msg.assistant .role { color: var(--role-assistant); }
+  .text { white-space: pre-wrap; word-wrap: break-word; }
+  .tool-group { border-left: 4px solid var(--role-tool); }
+  .tool { padding: 8px 14px; }
+  .tool + .tool { border-top: 1px solid var(--line); }
+  .tool-line { display: flex; gap: 10px; align-items: baseline; }
+  .fn { font-weight: 700; color: var(--role-tool); font-family: ui-monospace, monospace; font-size: 13px; }
+  .sum { flex: 1; }
+  details.raw { margin-top: 6px; }
+  details.raw summary, details.steps summary, details.system summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre.json {
+    background: #f3f4f6; border-radius: 6px; padding: 8px 10px; margin: 6px 0 0;
+    font-size: 12.5px; overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;
+  }
+  .json-label { margin-top: 8px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  details.steps { padding: 8px 14px 12px; border-top: 1px solid var(--line); }
+  details.steps li { margin: 8px 0; }
+  .decided { color: var(--role-tool); font-size: 13px; font-family: ui-monospace, monospace; }
+  .hl { background: var(--hl); border-radius: 2px; }
+  .hl.pending-highlight { background: var(--hl-pending); }
+  .hl.sugg { background: var(--sugg); border-bottom: 2px dashed var(--sugg-border); }
+  .hl.outline { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .mnote {
+    position: absolute; left: 0; width: 100%;
+    background: var(--panel); border-left: 3px solid var(--hl);
+    border-radius: 4px; padding: 7px 9px; font-size: 12.5px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .mnote.sugg { border-left-color: var(--sugg-border); background: #faf5ff; }
+  .mnote.outline { box-shadow: 0 0 0 2px var(--ink); }
+  .mnote .quote { color: var(--muted); font-style: italic; margin-bottom: 3px; }
+  .mnote .tag { font-size: 10px; font-weight: 700; color: var(--sugg-border); text-transform: uppercase; }
+  .mnote .acts { margin-top: 5px; display: flex; gap: 6px; }
+  .mnote button { font-size: 11px; padding: 2px 8px; }
+  .mnote.human .acts { visibility: hidden; }
+  .mnote.human:hover .acts { visibility: visible; }
+  .mnote .accept { border-color: var(--role-assistant); color: var(--role-assistant); }
+  .mnote .reject, .queue-tools .dismiss { border-color: #dc2626; color: #dc2626; }
+  #popover {
+    position: absolute; z-index: 80; display: none;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.16); padding: 8px;
+  }
+  #popover input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; width: 280px; }
+  #popover .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .panel { max-width: 980px; margin: 0 auto; padding: 18px; }
+  .mode-block, .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px; margin-bottom: 12px;
+  }
+  .mode-block h3 { margin: 0 0 4px; font-family: ui-monospace, monospace; font-size: 14px; }
+  .muted { color: var(--muted); }
+  .sugg-row, .prog-row {
+    display: flex; gap: 10px; align-items: baseline; padding: 8px 0;
+    border-top: 1px solid var(--line); font-size: 13px;
+  }
+  .prog-row { cursor: pointer; }
+  .prog-row:hover { color: var(--role-user); }
+  .prog-row .done { color: var(--role-assistant); font-size: 12px; }
+  .queue-tools { display: flex; gap: 8px; margin-bottom: 8px; }
+  .queue-tools button { font-size: 12px; padding: 4px 10px; }
+  #toast {
+    position: fixed; right: 18px; bottom: 18px; z-index: 90;
+    background: var(--ink); color: #fff; padding: 10px 14px; border-radius: 8px;
+    font-size: 13px; opacity: 0; transition: opacity .2s;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<header class="app">
+  <h1>Cartwheel <span class="dim">review</span></h1>
+  <div class="views">
+    <button data-view="session" class="active">Session</button>
+    <button data-view="taxonomy">Taxonomy</button>
+    <button data-view="suggestions">Suggestions</button>
+    <button data-view="progress">Progress</button>
+  </div>
+  <div class="spacer"></div>
+  <form class="jump" id="jump">
+    <input id="scenario-input" placeholder="full-094" aria-label="scenario id" />
+    <button type="submit">Go</button>
+  </form>
+  <div class="nav" id="session-nav">
+    <button id="prev" type="button" aria-label="previous session">&larr;</button>
+    <span class="pos" id="pos">0 / 0</span>
+    <button id="next" type="button" aria-label="next session">&rarr;</button>
+  </div>
+  <div class="counts" id="counts"></div>
+</header>
+
+<div id="session-view" class="view active">
+  <div class="session-head" id="session-head"></div>
+  <details class="system" id="system"></details>
+  <div class="trace-wrap">
+    <div class="trace-body" id="trace-body"></div>
+    <div class="margin-col" id="margin-col"></div>
+  </div>
+</div>
+
+<div id="taxonomy-view" class="view"><div class="panel" id="taxonomy"></div></div>
+<div id="suggestions-view" class="view"><div class="panel" id="suggestions"></div></div>
+<div id="progress-view" class="view"><div class="panel" id="progress"></div></div>
+
+<div id="popover">
+  <input id="note-input" placeholder="what went wrong? (Enter to save)" />
+  <div class="hint">free-form note, in your own words</div>
+</div>
+<div id="toast"></div>
+
+<script>
+const state = {
+  sessions: [],
+  annotations: [],
+  suggestions: [],
+  patterns: {modes: []},
+  cur: 0,
+};
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[ch]));
+}
+function pretty(value) {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+}
+function clip(text, n) {
+  text = String(text || "");
+  return text.length > n ? text.slice(0, n - 1) + "…" : text;
+}
+function toast(message) {
+  const el = document.getElementById("toast");
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 1600);
+}
+
+async function loadAll() {
+  const [sessions, annotations, suggestions, patterns] = await Promise.all([
+    fetch("/api/sessions").then((r) => r.json()),
+    fetch("/api/annotations").then((r) => r.json()),
+    fetch("/api/suggestions").then((r) => r.json()),
+    fetch("/api/patterns").then((r) => r.json()),
+  ]);
+  state.sessions = sessions.sessions || [];
+  state.annotations = Array.isArray(annotations) ? annotations : [];
+  state.suggestions = Array.isArray(suggestions) ? suggestions : [];
+  state.patterns = patterns && Array.isArray(patterns.modes) ? patterns : {modes: []};
+}
+
+function current() { return state.sessions[state.cur]; }
+
+function notesFor(traceId) {
+  const human = state.annotations
+    .filter((a) => a.trace_id === traceId)
+    .map((a) => ({...a, kind: "human"}));
+  const sugg = state.suggestions
+    .filter((s) => s.trace_id === traceId && s.status !== "rejected")
+    .map((s) => ({...s, kind: "sugg", note: s.note || s.reason || ""}));
+  return [...human, ...sugg];
+}
+
+function renderChrome() {
+  const session = current();
+  const pos = document.getElementById("pos");
+  pos.textContent = state.sessions.length ? `${state.cur + 1} / ${state.sessions.length}` : "0 / 0";
+  const noted = new Set(state.annotations.map((a) => a.trace_id));
+  const reviewed = state.sessions.filter((s) => s.turns.some((t) => noted.has(t.trace_id))).length;
+  document.getElementById("counts").textContent =
+    `${reviewed} / ${state.sessions.length} sessions noted`;
+  const head = document.getElementById("session-head");
+  if (!session) {
+    head.innerHTML = '<span class="meta">no sessions</span>';
+    return;
+  }
+  head.innerHTML =
+    `<span class="scenario">${escapeHtml(session.scenario_id)}</span>` +
+    `<span class="meta">role ${escapeHtml(session.role)}</span>` +
+    `<span class="meta">user ${escapeHtml(session.user_id)}</span>` +
+    `<span class="meta">${session.turns.length} turn${session.turns.length === 1 ? "" : "s"}</span>`;
+}
+
+function renderSystem() {
+  const session = current();
+  const box = document.getElementById("system");
+  const prompt = session && session.system_prompt;
+  if (!prompt) { box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  box.open = false;
+  box.innerHTML = `<summary>System prompt, same text on every turn</summary><pre>${escapeHtml(prompt)}</pre>`;
+}
+
+function annotatable(traceId, text) {
+  return `<div class="text annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(text)}</div>`;
+}
+
+function renderTool(traceId, tool) {
+  return `<div class="tool">` +
+    `<div class="tool-line"><span class="fn">${escapeHtml(tool.name)}</span>` +
+    `<span class="sum annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(tool.summary)}</span></div>` +
+    `<details class="raw"><summary>arguments and result</summary>` +
+    `<div class="json-label">Arguments</div>` +
+    `<pre class="json annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(pretty(tool.arguments))}</pre>` +
+    `<div class="json-label">Result</div>` +
+    `<pre class="json annotatable" data-trace-id="${escapeHtml(traceId)}">${escapeHtml(pretty(tool.result))}</pre>` +
+    `</details></div>`;
+}
+
+function renderSteps(traceId, steps) {
+  const n = steps.length;
+  const items = steps.map((step) => {
+    const decided = (step.tools || []).length
+      ? `<div class="decided">then ${(step.tools || []).map(escapeHtml).join(", ")}</div>`
+      : "";
+    const text = step.text
+      ? annotatable(traceId, step.text)
+      : `<div class="muted">no plain-text reasoning on this call</div>`;
+    return `<li>${text}${decided}</li>`;
+  }).join("");
+  return `<details class="steps"><summary>${n} model step${n === 1 ? "" : "s"}</summary><ol>${items}</ol></details>`;
+}
+
+function renderSession() {
+  renderChrome();
+  renderSystem();
+  const session = current();
+  const body = document.getElementById("trace-body");
+  if (!session) { body.innerHTML = ""; layoutMargin(); return; }
+  body.innerHTML = session.turns.map((turn, index) => {
+    const tools = (turn.tools || []).map((tool) => renderTool(turn.trace_id, tool)).join("");
+    const toolBlock = tools ? `<div class="tool-group">${tools}</div>` : "";
+    const shortId = String(turn.trace_id).slice(0, 8);
+    return `<section class="turn">` +
+      `<div class="turn-meta">Turn ${index + 1} · ${escapeHtml(shortId)}</div>` +
+      `<div class="msg user"><div class="role">User</div>${annotatable(turn.trace_id, turn.user_text)}</div>` +
+      toolBlock +
+      `<div class="msg assistant"><div class="role">Assistant</div>${annotatable(turn.trace_id, turn.assistant_text)}</div>` +
+      renderSteps(turn.trace_id, turn.model_steps || []) +
+      `</section>`;
+  }).join("");
+  applyHighlights();
+  layoutMargin();
+}
+
+function applyHighlights() {
+  document.querySelectorAll(".annotatable").forEach((el) => {
+    const traceId = el.dataset.traceId;
+    const text = el.textContent;
+    const ranges = [];
+    notesFor(traceId).forEach((item) => {
+      if (!item.quote) return;
+      const pos = text.indexOf(item.quote);
+      if (pos >= 0) ranges.push([pos, pos + item.quote.length, item]);
+    });
+    if (!ranges.length) return;
+    ranges.sort((a, b) => a[0] - b[0]);
+    let out = "";
+    let cursor = 0;
+    ranges.forEach(([start, end, item]) => {
+      if (start < cursor) return;
+      out += escapeHtml(text.slice(cursor, start));
+      const cls = item.kind === "sugg" ? "hl sugg" : "hl";
+      out += `<span class="${cls}" data-item="${escapeHtml(item.id)}">${escapeHtml(text.slice(start, end))}</span>`;
+      cursor = end;
+    });
+    out += escapeHtml(text.slice(cursor));
+    el.innerHTML = out;
+  });
+}
+
+function layoutMargin() {
+  const col = document.getElementById("margin-col");
+  col.innerHTML = "";
+  const session = current();
+  if (!session) return;
+  const items = session.turns.flatMap((turn) => notesFor(turn.trace_id));
+  if (!items.length) return;
+  const colRect = col.getBoundingClientRect();
+  const placed = items.map((item) => {
+    const hl = document.querySelector(`.hl[data-item="${CSS.escape(item.id)}"]`);
+    const top = hl ? hl.getBoundingClientRect().top - colRect.top : 0;
+    return {item, top, hl};
+  }).sort((a, b) => a.top - b.top);
+  let lastBottom = 0;
+  placed.forEach(({item, top, hl}) => {
+    const note = document.createElement("div");
+    note.className = "mnote " + (item.kind === "sugg" ? "sugg" : "human");
+    const quote = item.quote ? `<div class="quote">“${escapeHtml(clip(item.quote, 80))}”</div>` : "";
+    const tag = item.kind === "sugg" ? `<div class="tag">agent suggestion</div>` : "";
+    const acts = item.kind === "sugg"
+      ? `<div class="acts"><button class="accept" data-accept="${escapeHtml(item.id)}">Accept</button><button class="reject" data-reject="${escapeHtml(item.id)}">Reject</button></div>`
+      : `<div class="acts"><button data-del="${escapeHtml(item.id)}">Delete</button></div>`;
+    note.innerHTML = `${tag}${quote}<div class="body">${escapeHtml(item.note || "")}</div>${acts}`;
+    const y = Math.max(top, lastBottom);
+    note.style.top = y + "px";
+    col.appendChild(note);
+    lastBottom = y + note.offsetHeight + 8;
+    if (hl) {
+      note.addEventListener("mouseenter", () => hl.classList.add("outline"));
+      note.addEventListener("mouseleave", () => hl.classList.remove("outline"));
+      hl.addEventListener("mouseenter", () => note.classList.add("outline"));
+      hl.addEventListener("mouseleave", () => note.classList.remove("outline"));
+    }
+  });
+  col.querySelectorAll("[data-del]").forEach((btn) => {
+    btn.onclick = () => deleteAnnotation(btn.dataset.del);
+  });
+  col.querySelectorAll("[data-accept]").forEach((btn) => {
+    btn.onclick = () => acceptSuggestion(btn.dataset.accept);
+  });
+  col.querySelectorAll("[data-reject]").forEach((btn) => {
+    btn.onclick = () => rejectSuggestion(btn.dataset.reject);
+  });
+}
+
+function renderTaxonomy() {
+  const root = document.getElementById("taxonomy");
+  const modes = state.patterns.modes || [];
+  if (!modes.length) {
+    root.innerHTML = `<div class="card"><p>No failure modes yet.</p><p class="muted">Modes are groups of notes you have already written. They show up here after axial coding, each with the notes that produced it.</p></div>`;
+    return;
+  }
+  root.innerHTML = modes.map((mode) => {
+    const notes = state.annotations.filter((a) => (mode.created_from || []).includes(a.id) || (mode.example_trace_ids || []).includes(a.trace_id));
+    const items = notes.map((a) => `<li>${escapeHtml(clip(a.note, 160))}</li>`).join("") || `<li class="muted">no linked notes</li>`;
+    return `<article class="mode-block"><h3>${escapeHtml(mode.name || "")}</h3><p class="muted">${escapeHtml(mode.definition || "")}</p><ul>${items}</ul></article>`;
+  }).join("");
+}
+
+function renderSuggestions() {
+  const root = document.getElementById("suggestions");
+  const pending = state.suggestions.filter((s) => s.status !== "rejected");
+  const rejected = state.suggestions.filter((s) => s.status === "rejected");
+  const row = (item, controls) =>
+    `<div class="sugg-row"><span class="mono">${escapeHtml(item.mode || "suggestion")}</span><span>${escapeHtml(clip(item.note || item.quote || "", 180))}</span>${controls}</div>`;
+  const pendingHtml = pending.length
+    ? pending.map((item) => row(item, `<button class="accept" data-accept="${escapeHtml(item.id)}">Accept</button><button class="reject" data-reject="${escapeHtml(item.id)}">Reject</button>`)).join("")
+    : `<p class="muted">No suggestions waiting. Agent ideas show up here, separate from your notes, and stay suggestions until you accept or reject them.</p>`;
+  const rejectedHtml = rejected.length
+    ? `<h3>Rejected</h3>` + rejected.map((item) => row(item, "")).join("")
+    : "";
+  root.innerHTML = `<div class="card"><h2>Suggestions</h2>${pendingHtml}${rejectedHtml}</div>`;
+  root.querySelectorAll("[data-accept]").forEach((btn) => { btn.onclick = () => acceptSuggestion(btn.dataset.accept); });
+  root.querySelectorAll("[data-reject]").forEach((btn) => { btn.onclick = () => rejectSuggestion(btn.dataset.reject); });
+}
+
+function renderProgress() {
+  const root = document.getElementById("progress");
+  const noted = new Set(state.annotations.map((a) => a.trace_id));
+  const rows = state.sessions.map((session, index) => {
+    const done = session.turns.some((turn) => noted.has(turn.trace_id));
+    const mark = done ? `<span class="done">noted</span>` : `<span class="muted">unread</span>`;
+    return `<div class="prog-row" data-index="${index}"><span class="mono">${escapeHtml(session.scenario_id)}</span><span>${escapeHtml(session.role)}</span><span>${session.turns.length} turns</span>${mark}</div>`;
+  }).join("");
+  const reviewed = state.sessions.filter((s) => s.turns.some((t) => noted.has(t.trace_id))).length;
+  root.innerHTML = `<div class="card"><h2>Progress</h2><p>${reviewed} of ${state.sessions.length} sessions have a note. A session with no note is still unread.</p>${rows}</div>`;
+  root.querySelectorAll(".prog-row").forEach((row) => {
+    row.onclick = () => {
+      state.cur = Number(row.dataset.index);
+      showView("session");
+    };
+  });
+}
+
+function showView(name) {
+  document.querySelectorAll(".view").forEach((el) => el.classList.toggle("active", el.id === name + "-view"));
+  document.querySelectorAll(".views button").forEach((btn) => btn.classList.toggle("active", btn.dataset.view === name));
+  document.getElementById("session-nav").hidden = name !== "session";
+  if (name === "session") renderSession();
+  if (name === "taxonomy") renderTaxonomy();
+  if (name === "suggestions") renderSuggestions();
+  if (name === "progress") renderProgress();
+}
+
+async function save(path, body) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error("save failed");
+}
+
+let pending = null;
+
+document.getElementById("trace-body").addEventListener("mouseup", () => {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed) return;
+  const text = sel.toString().trim();
+  if (!text) return;
+  const anchor = sel.anchorNode && sel.anchorNode.parentElement
+    ? sel.anchorNode.parentElement.closest(".annotatable")
+    : null;
+  if (!anchor) return;
+  const range = sel.getRangeAt(0);
+  const span = document.createElement("span");
+  span.className = "hl pending-highlight";
+  try { range.surroundContents(span); }
+  catch (err) { return; }
+  pending = {trace_id: anchor.dataset.traceId, quote: text, span};
+  sel.removeAllRanges();
+  const rect = span.getBoundingClientRect();
+  const pop = document.getElementById("popover");
+  pop.style.display = "block";
+  pop.style.left = (window.scrollX + rect.left) + "px";
+  pop.style.top = (window.scrollY + rect.bottom + 6) + "px";
+  const input = document.getElementById("note-input");
+  input.value = "";
+  input.focus();
+});
+
+function closePopover() {
+  pending = null;
+  document.getElementById("popover").style.display = "none";
+}
+
+document.getElementById("note-input").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") commitAnnotation();
+  else if (event.key === "Escape") { closePopover(); renderSession(); }
+});
+document.addEventListener("mousedown", (event) => {
+  const pop = document.getElementById("popover");
+  if (pop.style.display === "block" && !pop.contains(event.target)) {
+    closePopover();
+    renderSession();
+  }
+});
+
+async function commitAnnotation() {
+  const note = document.getElementById("note-input").value.trim();
+  const ctx = pending;
+  if (!note || !ctx) { closePopover(); renderSession(); return; }
+  state.annotations.push({
+    id: "a" + Date.now(),
+    trace_id: ctx.trace_id,
+    quote: ctx.quote,
+    note,
+    ts: new Date().toISOString(),
+    author: "human",
+  });
+  closePopover();
+  await save("/api/annotations", state.annotations);
+  renderSession();
+  toast("note saved");
+}
+
+async function deleteAnnotation(id) {
+  state.annotations = state.annotations.filter((a) => a.id !== id);
+  await save("/api/annotations", state.annotations);
+  renderSession();
+}
+
+async function acceptSuggestion(id) {
+  const suggestion = state.suggestions.find((s) => s.id === id);
+  if (!suggestion) return;
+  state.annotations.push({
+    id: "a" + Date.now(),
+    trace_id: suggestion.trace_id,
+    quote: suggestion.quote || "",
+    note: suggestion.note || suggestion.reason || "",
+    ts: new Date().toISOString(),
+    author: "accepted_suggestion",
+    source: "accepted_suggestion",
+  });
+  state.suggestions = state.suggestions.filter((s) => s.id !== id);
+  await save("/api/annotations", state.annotations);
+  await save("/api/suggestions", state.suggestions);
+  renderSession();
+  renderSuggestions();
+  toast("suggestion accepted");
+}
+
+async function rejectSuggestion(id) {
+  state.suggestions = state.suggestions.map((s) => s.id === id ? {...s, status: "rejected"} : s);
+  await save("/api/suggestions", state.suggestions);
+  renderSession();
+  renderSuggestions();
+  toast("suggestion rejected");
+}
+
+document.querySelectorAll(".views button").forEach((btn) => {
+  btn.onclick = () => showView(btn.dataset.view);
+});
+document.getElementById("prev").onclick = () => {
+  if (state.cur > 0) { state.cur -= 1; renderSession(); window.scrollTo(0, 0); }
+};
+document.getElementById("next").onclick = () => {
+  if (state.cur < state.sessions.length - 1) { state.cur += 1; renderSession(); window.scrollTo(0, 0); }
+};
+document.getElementById("jump").onsubmit = (event) => {
+  event.preventDefault();
+  const query = document.getElementById("scenario-input").value.trim();
+  const index = state.sessions.findIndex((s) => s.scenario_id === query);
+  if (index < 0) { toast("no session " + query); return; }
+  state.cur = index;
+  showView("session");
+  window.scrollTo(0, 0);
+};
+
+loadAll().then(() => {
+  const params = new URLSearchParams(location.search);
+  const scenario = params.get("scenario");
+  if (scenario) {
+    const index = state.sessions.findIndex((s) => s.scenario_id === scenario);
+    if (index >= 0) state.cur = index;
+  }
+  renderSession();
+}).catch((err) => {
+  document.getElementById("trace-body").textContent = String(err);
+});
+</script>
+</body>
+</html>
