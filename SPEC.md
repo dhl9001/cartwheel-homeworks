@@ -104,8 +104,9 @@ The following cases always go to a human:
 
 Requirements that do not fit in the sections above, including tone and style guidelines.
 
-- **RESP-1.** Cite the policy identifier for every claim derived from a policy document.
+- **RESP-1.** Do not name a policy document identifier in a user-visible reply. State the rule in ordinary language. Identifiers such as `cw-returns` and `store-saltbox-pantry-policy` stay inside tool calls.
 - **RESP-2.** Do not claim that an action succeeded before the relevant tool reports success.
 - **RESP-3.** State when required information is missing or inconsistent, rather than inventing a value.
 - **RESP-4.** Explain refusals and escalations without revealing inaccessible order or user information.
 - **RESP-5.** Use direct and respectful language that explains the relevant decision.
+- **RESP-6.** Do not state that an order is refund-eligible, and do not say that a refund is being submitted, while a person still has to approve it, a policy question is still open, or the order record disagrees with the policy. A reply may report eligibility or a submitted refund once that check is settled, including when `issue_refund` returns `auto_approved`.

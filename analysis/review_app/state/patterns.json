@@ -63,8 +63,8 @@
       "title": "The reply names a policy document id",
       "status": "candidate",
       "definition": "The reply includes any policy document identifier, including platform ids such as cw-returns and store policy ids.",
-      "requirement_source": "Pending revision of SPEC.md RESP-1. RESP-1 currently requires citing the policy identifier for every claim taken from a policy document.",
-      "boundary": "Accepting this group means the requirement source is a change to RESP-1. Until that revision is written, these notes are not failures of the spec as it stands.",
+      "requirement_source": "SPEC.md RESP-1. A user-visible reply must not name a policy document identifier.",
+      "boundary": "RESP-1 was revised after annotation a1790085259356 on full-007, which marked the quote cw-refunds as an internal document name. Tool calls may still carry the identifier.",
       "created_from": [
         "a1790084680120",
         "a1790085259356",
@@ -197,7 +197,7 @@
       "title": "The reply states a refund is available before it is settled",
       "status": "candidate",
       "definition": "The reply states that an order is refund-eligible, or that a refund is being submitted, while a human still has to approve it, a policy question is still open, or the order record is inconsistent.",
-      "requirement_source": "SPEC.md RESP-2 covers claiming the refund succeeded before the tool does. Stating eligibility before human review, an open policy question, or a bad order record is not written in ESC-1.",
+      "requirement_source": "SPEC.md RESP-6. RESP-2 still covers claiming the refund succeeded before the tool reports success. The motivating note is a1790094260938 on full-066.",
       "created_from": [
         "a1790087452459",
         "a1790094035661",
@@ -330,6 +330,10 @@
     {
       "at": "2026-09-22T17:48:00+01:00",
       "change": "The final 15 uniform traces produced one previously unseen note, on full-056. It stayed ungrouped. That is not several new modes, so no extra review batch was added."
+    },
+    {
+      "at": "2026-09-22T18:10:00+01:00",
+      "change": "Wrote the two specification gaps into SPEC.md. RESP-1 now forbids naming a policy document id in a reply. RESP-6 forbids stating refund eligibility, or that a refund is being submitted, while human review, an open policy question, or a disagreeing order record is still unresolved."
     }
   ]
 }
