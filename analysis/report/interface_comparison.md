@@ -8,7 +8,7 @@ Role is still color, and only color: user blue, assistant green, tool amber. A t
 
 ## Changed after inspecting the traces
 
-Langfuse stores one user turn per trace, and the standard view hides the reply inside model spans. The review screen shows one session as a single scroll, in time order. Each tool row states the outcome without an extra click (`order 1894 → cancelled`). Scenario id, role, and user id stay in the header. Model steps stay closed until opened. Resource attributes are omitted.
+Langfuse stores one user turn per trace, and the standard view hides the reply inside model spans. The review screen shows one session as a single scroll, in time order. Each tool row states the outcome without an extra click (`order 1894 → cancelled`). Scenario id, role, and user id stay in the header. Each model step sits in the scroll where it happened: the assistant line, then the tool row it produced, then the next assistant line. Resource attributes are omitted.
 
 ## Limitation
 

@@ -342,18 +342,55 @@ function renderTool(traceId, tool) {
     `</details></div>`;
 }
 
-function renderSteps(traceId, steps) {
-  const n = steps.length;
-  const items = steps.map((step) => {
-    const decided = (step.tools || []).length
-      ? `<div class="decided">then ${(step.tools || []).map(escapeHtml).join(", ")}</div>`
-      : "";
-    const text = step.text
-      ? annotatable(traceId, step.text, true)
-      : `<div class="muted">no plain-text reasoning on this call</div>`;
-    return `<li>${text}${decided}</li>`;
-  }).join("");
-  return `<details class="steps"><summary>${n} model step${n === 1 ? "" : "s"}</summary><ol>${items}</ol></details>`;
+function sameText(left, right) {
+  return String(left || "").replace(/\s+/g, " ").trim() === String(right || "").replace(/\s+/g, " ").trim();
+}
+
+function assistantBlock(traceId, text) {
+  if (!text || !String(text).trim()) return "";
+  return `<div class="msg assistant"><div class="role">Assistant</div>${annotatable(traceId, text, true)}</div>`;
+}
+
+function takeTools(queue, names) {
+  if (!names.length) return [];
+  const head = queue.slice(0, names.length);
+  const headNames = head.map((tool) => tool.name).slice().sort().join("\0");
+  const wantNames = names.slice().sort().join("\0");
+  if (head.length === names.length && headNames === wantNames) return queue.splice(0, names.length);
+  const picked = [];
+  names.forEach((name) => {
+    const idx = queue.findIndex((tool) => tool.name === name && !picked.includes(tool));
+    if (idx >= 0) picked.push(queue[idx]);
+  });
+  picked.sort((a, b) => queue.indexOf(a) - queue.indexOf(b));
+  picked.forEach((tool) => {
+    const idx = queue.indexOf(tool);
+    if (idx >= 0) queue.splice(idx, 1);
+  });
+  return picked;
+}
+
+function toolGroup(traceId, tools) {
+  if (!tools.length) return "";
+  return `<div class="tool-group">${tools.map((tool) => renderTool(traceId, tool)).join("")}</div>`;
+}
+
+function renderTurnBody(turn) {
+  const queue = (turn.tools || []).slice();
+  const steps = turn.model_steps || [];
+  let html = `<div class="msg user"><div class="role">User</div>${annotatable(turn.trace_id, turn.user_text, true)}</div>`;
+  if (!steps.length) {
+    return html + toolGroup(turn.trace_id, queue) + assistantBlock(turn.trace_id, turn.assistant_text);
+  }
+  let showedFinal = false;
+  steps.forEach((step) => {
+    html += assistantBlock(turn.trace_id, step.text);
+    if (sameText(step.text, turn.assistant_text)) showedFinal = true;
+    html += toolGroup(turn.trace_id, takeTools(queue, step.tools || []));
+  });
+  html += toolGroup(turn.trace_id, queue);
+  if (!showedFinal) html += assistantBlock(turn.trace_id, turn.assistant_text);
+  return html;
 }
 
 function renderSession() {
@@ -363,8 +400,6 @@ function renderSession() {
   const body = document.getElementById("trace-body");
   if (!session) { body.innerHTML = ""; layoutMargin(); return; }
   body.innerHTML = session.turns.map((turn, index) => {
-    const tools = (turn.tools || []).map((tool) => renderTool(turn.trace_id, tool)).join("");
-    const toolBlock = tools ? `<div class="tool-group">${tools}</div>` : "";
     const shortId = String(turn.trace_id).slice(0, 8);
     const focused = turn.trace_id === state.focusTrace;
     const already = covers(turn.trace_id);
@@ -373,10 +408,7 @@ function renderSession() {
       : "";
     return `<section class="turn${focused ? " focus" : ""}" id="turn-${escapeHtml(turn.trace_id)}">` +
       `<div class="turn-meta">Turn ${index + 1} · ${escapeHtml(shortId)}${noFail}</div>` +
-      `<div class="msg user"><div class="role">User</div>${annotatable(turn.trace_id, turn.user_text, true)}</div>` +
-      toolBlock +
-      `<div class="msg assistant"><div class="role">Assistant</div>${annotatable(turn.trace_id, turn.assistant_text, true)}</div>` +
-      renderSteps(turn.trace_id, turn.model_steps || []) +
+      renderTurnBody(turn) +
       `</section>`;
   }).join("");
   applyHighlights();
