@@ -1,6 +1,6 @@
 {
-  "accepted_at": "2026-09-22T16:02:00+01:00",
-  "source": "Batch 1 open codes, grouped by whether one product change would fix the notes together. Accepted as proposed. Status is candidate: names, close negatives, and evaluator type are still open.",
+  "accepted_at": "2026-09-22T16:46:00+01:00",
+  "source": "Candidate groups from batch 1, updated with batch 2 notes. Status is candidate: close negatives and evaluator type are still open.",
   "modes": [
     {
       "name": "narrated_method",
@@ -24,7 +24,17 @@
         "a1790084855722",
         "a1790085283823",
         "a1790086440544",
-        "a1790086571122"
+        "a1790086571122",
+        "a1790090206582",
+        "a1790090398967",
+        "a1790090547770",
+        "a1790090569707",
+        "a1790090576884",
+        "a1790090740671",
+        "a1790090808378",
+        "a1790090874457",
+        "a1790091071720",
+        "a1790091080270"
       ],
       "example_trace_ids": [
         "ef7942dc762a4cac3ec0a0e6297f408f",
@@ -38,14 +48,21 @@
         "6600cf6d048b712a9ad826bd6e5a6bc1",
         "bd1d6200b2d313aebcf9bd3e2a1f9f7e",
         "bc7f60adb548264354fd1ebc0b7d31c3",
-        "b3e1af7cbf217c01d007a28abdd190c1"
+        "b3e1af7cbf217c01d007a28abdd190c1",
+        "d47b3ac5990d737c43cc67129d5ce3fe",
+        "6a6e522fbac34ffe867099ec157b7b2d",
+        "5a7afbc8afe734e685213bd4b2ebd247",
+        "2819ef7dc1cf0f4f74f90259477c0ad8",
+        "253b82d858ffd34304854008a54f0c04",
+        "ea7fecc989cd3b23fd46648846b03eef",
+        "3e1575134659e5dd8d7b3cf98512e9ef"
       ]
     },
     {
       "name": "cited_policy_id",
       "title": "The reply names a policy document id",
       "status": "candidate",
-      "definition": "The reply includes a policy document identifier such as cw-returns, cw-refunds, cw-escalations, or a store policy id.",
+      "definition": "The reply includes any policy document identifier, including platform ids such as cw-returns and store policy ids.",
       "requirement_source": "Pending revision of SPEC.md RESP-1. RESP-1 currently requires citing the policy identifier for every claim taken from a policy document.",
       "boundary": "Accepting this group means the requirement source is a change to RESP-1. Until that revision is written, these notes are not failures of the spec as it stands.",
       "created_from": [
@@ -60,7 +77,16 @@
         "a1790086490598",
         "a1790086571122",
         "a1790087119117",
-        "a1790087192726"
+        "a1790087192726",
+        "a1790090318007",
+        "a1790090439952",
+        "a1790090597382",
+        "a1790090757576",
+        "a1790090883338",
+        "a1790090967743",
+        "a1790090916886",
+        "a1790090921595",
+        "a1790091619030"
       ],
       "example_trace_ids": [
         "345306195e846a24db91b8cb2434cebb",
@@ -71,7 +97,15 @@
         "b3e1af7cbf217c01d007a28abdd190c1",
         "6600cf6d048b712a9ad826bd6e5a6bc1",
         "5cce752dfee53b5c649973612a6bd8b2",
-        "54457b2e4a73a69f85f321d47443ac30"
+        "54457b2e4a73a69f85f321d47443ac30",
+        "49c2a73b3a405c8a139f81945c3916e1",
+        "6a6e522fbac34ffe867099ec157b7b2d",
+        "5a7afbc8afe734e685213bd4b2ebd247",
+        "2819ef7dc1cf0f4f74f90259477c0ad8",
+        "ea7fecc989cd3b23fd46648846b03eef",
+        "a2358aef4143b922cf95b7dced86d5ed",
+        "ced654dbd2aae57322ce3cec4fe7e344",
+        "b10c1dca878b6c4e819275179dca7744"
       ]
     },
     {
@@ -89,7 +123,8 @@
         "a1790085283823",
         "a1790086748902",
         "a1790086490598",
-        "a1790086571122"
+        "a1790086571122",
+        "a1790090624375"
       ],
       "example_trace_ids": [
         "1093caaaa35d7fc33ca668496a68842c",
@@ -99,7 +134,8 @@
         "bc7f60adb548264354fd1ebc0b7d31c3",
         "fe48b220ba8543b0c2ec08b3ef43ab85",
         "b3e1af7cbf217c01d007a28abdd190c1",
-        "6600cf6d048b712a9ad826bd6e5a6bc1"
+        "6600cf6d048b712a9ad826bd6e5a6bc1",
+        "5a7afbc8afe734e685213bd4b2ebd247"
       ]
     },
     {
@@ -117,7 +153,8 @@
         "a1790087050526",
         "a1790087231766",
         "a1790084394540",
-        "a1790085914320"
+        "a1790085914320",
+        "a1790090264621"
       ],
       "example_trace_ids": [
         "bc7f60adb548264354fd1ebc0b7d31c3",
@@ -127,7 +164,8 @@
         "9fdabc417dd1386a8cd30b0287b68aa2",
         "b77bbac37897193d8bf5b1c45896e65a",
         "d5bbfcd7adcc7075a37437169a704667",
-        "e68b6352e51d75a1895b4b5cd38b69e0"
+        "e68b6352e51d75a1895b4b5cd38b69e0",
+        "42ee07a255ba3bec49cf4b9d31ece0f7"
       ]
     },
     {
@@ -142,12 +180,14 @@
         "a1790085171862",
         "a1790086547496",
         "a1790086726995",
-        "a1790086762060"
+        "a1790086762060",
+        "a1790090704030"
       ],
       "example_trace_ids": [
         "bc7f60adb548264354fd1ebc0b7d31c3",
         "6600cf6d048b712a9ad826bd6e5a6bc1",
-        "fe48b220ba8543b0c2ec08b3ef43ab85"
+        "fe48b220ba8543b0c2ec08b3ef43ab85",
+        "e679290ff40508dd870b4505b4622026"
       ]
     },
     {
@@ -171,11 +211,28 @@
       "requirement_source": "Specification gap. No current SPEC id forbids repetition.",
       "created_from": [
         "a1790086618995",
-        "a1790085620620"
+        "a1790085620620",
+        "a1790091475675"
       ],
       "example_trace_ids": [
         "6600cf6d048b712a9ad826bd6e5a6bc1",
-        "832ef0bc48989a9e9c047feaa9dcea19"
+        "832ef0bc48989a9e9c047feaa9dcea19",
+        "6875f0cd9bdb13d95227924a8ba74301"
+      ]
+    },
+    {
+      "name": "escalated_support_user",
+      "title": "The reply opens a ticket for someone who is already support",
+      "status": "candidate",
+      "definition": "The user is a support agent, and the reply calls escalate_to_human instead of answering or asking what they want done.",
+      "requirement_source": "Specification gap. ESC-1 through ESC-4 say when a case should be escalated. They do not say a support user should not be escalated to another human.",
+      "created_from": [
+        "a1790090517628",
+        "a1790087169995"
+      ],
+      "example_trace_ids": [
+        "235ceaaabf9699c5c7f731050fef4022",
+        "75a1affa64cc74144ae2c376279866f0"
       ]
     }
   ],
@@ -187,10 +244,28 @@
       "reason": "One note about a table. RESP-5 does not specify layout. It becomes a mode only if that formatting requirement is written down."
     },
     {
-      "id": "a1790087169995",
-      "scenario_id": "full-099",
-      "note": "Talking to support, so shouldn't open another ticket. Should ask the user what to do first since it is already marked as refunded.",
-      "reason": "Different product change from asking before an unclear shopper target: a support user should not open another ticket."
+      "id": "a1790090428532",
+      "scenario_id": "full-006",
+      "note": "Did not look up store specific refund policy",
+      "reason": "One note. The change is to retrieve the store policy before stating that store's terms. The unused-tool group is about an extra lookup."
+    },
+    {
+      "id": "a1790090684025",
+      "scenario_id": "full-061",
+      "note": "If this is the case the agent should specify this only includes products with the name audio associated with it",
+      "reason": "One note. The change is to say the results are limited to the substituted search term. Hiding the method would remove the sentence this note wants kept."
+    },
+    {
+      "id": "a1790090777322",
+      "scenario_id": "full-011",
+      "note": "Strange ordering of communication - this hsould come first to confirm product -> then confirm cancel is possible",
+      "reason": "One note. The change is the order of sentences in one reply. It stays separate from asking before an unclear target."
+    }
+  ],
+  "revisions": [
+    {
+      "at": "2026-09-22T16:46:00+01:00",
+      "change": "After batch 2, added escalated_support_user from the full-033 and full-099 notes, and widened cited_policy_id to any policy document id. Three single notes stayed ungrouped."
     }
   ]
 }
