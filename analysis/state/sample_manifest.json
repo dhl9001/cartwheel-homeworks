@@ -1,0 +1,158 @@
+{
+  "source": "langfuse",
+  "k": 30,
+  "strategy": "all_grouped_by_scenario",
+  "selected_at": "2026-09-15T20:21:24.126731+00:00",
+  "picks": [
+    {
+      "trace_id": "8792b717198f3ded5f694a0d42f5421d",
+      "scenario_id": "pilot-0001",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "c252dddc6145703aea1da40082d5b191",
+      "scenario_id": "pilot-0002",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "5c9a4c636bb2faf8a8e37d099397ab14",
+      "scenario_id": "pilot-0003",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "72370f0dc5c54e265294a1c9ccd2e9a4",
+      "scenario_id": "pilot-0004",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "45067bfef3152f8bf27fa99ccc163abd",
+      "scenario_id": "pilot-0005",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "032e16002c4c7b901eb245c221012708",
+      "scenario_id": "pilot-0006",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "b531d5f915fcc97036e3d57efe0ac5e9",
+      "scenario_id": "pilot-0007",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "a4341b08843f0c00c35ba001adbfd9d8",
+      "scenario_id": "pilot-0008",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "bb852d0b11cb92b5b7bf1e52e82155b9",
+      "scenario_id": "pilot-0009",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "7cf6e44a4ceec04ddcee2f4d9b4a6ba3",
+      "scenario_id": "pilot-0010",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "56234eabc7edd2be2084809636aab27d",
+      "scenario_id": "pilot-0011",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "9291658063ca1a93f1304ac3ac625e5a",
+      "scenario_id": "pilot-0012",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "9f20f7d87fa36cfc30f0530b3bee4d37",
+      "scenario_id": "pilot-0013",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "9094409f81f751196b4b433da94bc130",
+      "scenario_id": "pilot-0014",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "aaeccbc7b65a2ba8b9e286e74d6d480a",
+      "scenario_id": "pilot-0015",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "24b73c77e860ff4ad43c8fa25269e640",
+      "scenario_id": "pilot-0016",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "d71f5e0ccd69a3c30e8d9d53b2c1166e",
+      "scenario_id": "pilot-0017",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "9bf30d31ae01344fee9410a1a695d5bd",
+      "scenario_id": "pilot-0018",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "7d939e9060bc6b5aa388ddf38748f8da",
+      "scenario_id": "pilot-0019",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "f4fd3699a11dd7b3f0e169e0c4de0092",
+      "scenario_id": "pilot-0020",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "63a408443fff75e978fcf7e906a4b152",
+      "scenario_id": "pilot-0021",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "16e15ed247e2384388c7cf6cd35422ae",
+      "scenario_id": "pilot-0022",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "2f8ef5fb723fe3930c5b750e14ecd3a7",
+      "scenario_id": "pilot-0023",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "71fc7e23f272bc87e9024ecd86751aa2",
+      "scenario_id": "pilot-0024",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "b0e3d1c19685c531f3d1df368a6a63d5",
+      "scenario_id": "pilot-0025",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "40f03504e35ef2d402db4fe76cfb7ad4",
+      "scenario_id": "pilot-0026",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "9a5fa3a900c266e1819d319cf11e97f0",
+      "scenario_id": "pilot-0027",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "f75833f89c9290e502e3d63d63bee0f3",
+      "scenario_id": "pilot-0028",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "facb2d038118b4ccfb8a939da5184c84",
+      "scenario_id": "pilot-0029",
+      "reason": "all pilot traces, grouped by scenario"
+    },
+    {
+      "trace_id": "ff439b0ab214f90b03e6bf37a8340492",
+      "scenario_id": "pilot-0030",
+      "reason": "all pilot traces, grouped by scenario"
+    }
+  ]
+}
