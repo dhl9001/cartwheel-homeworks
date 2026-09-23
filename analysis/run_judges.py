@@ -11,9 +11,11 @@ from pathlib import Path
 
 import os
 
+from analysis.helpers.guards import is_frozen
 from analysis.helpers.tools import (
     _load_judge,
     _load_labels,
+    freeze_judge,
     judge_alignment,
     register_judge,
     run_judge,
@@ -172,6 +174,25 @@ def run_development(mode: str = MODE, prompt_path: Path | None = None) -> dict:
     report_path.write_text(json.dumps(development, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {report_path}")
     return development
+
+
+def run_test(judge_id: str) -> dict:
+    """Freeze the selected judge once, score the test split, and save the metrics."""
+    _load_local_env()
+    os.environ["CARTWHEEL_JUDGE_TRACE_SOURCE"] = str(INPUTS_PATH.resolve())
+    judge = _load_judge(judge_id)
+    if not is_frozen(judge):
+        freeze_judge(judge_id)
+    test_ids = json.loads((ROOT / "analysis" / "state" / "splits.json").read_text())[judge["mode"]]["test"]
+    print(f"judge {judge_id} model {judge['model']} test traces {len(test_ids)}")
+    run_judge(judge_id, split="test")
+    test = judge_alignment(judge_id, split="test")
+    report_dir = ROOT / "analysis" / "report"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / f"test-{judge_id}.json"
+    report_path.write_text(json.dumps(test, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {report_path}")
+    return test
 
 
 def _class_counts(mode: str, splits: dict[str, list[str]]) -> None:
