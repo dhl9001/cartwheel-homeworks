@@ -9,7 +9,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from analysis.helpers.tools import _load_labels, split_labels
+import os
+
+from analysis.helpers.tools import (
+    _load_judge,
+    _load_labels,
+    judge_alignment,
+    register_judge,
+    run_judge,
+    split_labels,
+)
 from analysis.review_app.sessions import build_sessions
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -107,6 +116,64 @@ def split_data(mode: str = MODE) -> dict[str, list[str]]:
     return splits
 
 
+def _load_local_env() -> None:
+    """Load KEY=VALUE lines from .env. Existing variables win. Values stay unprinted."""
+    env_path = ROOT / ".env"
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip("'\""))
+
+
+def _draft_id(mode: str, prompt_text: str, judge_model: str) -> str | None:
+    """Reuse an unfrozen judge when a rerun would otherwise register a new version."""
+    history_path = ROOT / "analysis" / "state" / "judges" / f"_history_{mode}.json"
+    if not history_path.exists():
+        return None
+    history = json.loads(history_path.read_text(encoding="utf-8"))
+    versions = history.get("versions") or []
+    if not versions:
+        return None
+    judge_id = versions[-1]["judge_id"]
+    judge = _load_judge(judge_id)
+    if (
+        judge.get("prompt_text") == prompt_text
+        and judge.get("model") == judge_model
+        and judge.get("status") != "frozen"
+    ):
+        return judge_id
+    return None
+
+
+def run_development(mode: str = MODE, prompt_path: Path | None = None) -> dict:
+    """Register the prompt, score development traces, and save the metrics."""
+    _load_local_env()
+    os.environ["CARTWHEEL_JUDGE_TRACE_SOURCE"] = str(INPUTS_PATH.resolve())
+    path = Path(prompt_path) if prompt_path else ROOT / "prompts" / f"{mode}-v0.txt"
+    if not path.is_file():
+        path = ROOT / "analysis" / "prompts" / f"{mode}-v0.txt"
+    prompt_text = path.read_text(encoding="utf-8")
+    judge_model = "gpt-4o-mini"
+    judge_id = _draft_id(mode, prompt_text, judge_model)
+    if judge_id is None:
+        record = register_judge(mode=mode, prompt_text=prompt_text, judge_model=judge_model)
+        judge_id = record["judge_id"]
+    dev_ids = json.loads((ROOT / "analysis" / "state" / "splits.json").read_text())[mode]["dev"]
+    print(f"judge {judge_id} model {judge_model} development traces {len(dev_ids)}")
+    run_judge(judge_id, split="dev")
+    development = judge_alignment(judge_id, split="dev")
+    report_dir = ROOT / "analysis" / "report"
+    report_dir.mkdir(parents=True, exist_ok=True)
+    report_path = report_dir / f"dev-{judge_id}.json"
+    report_path.write_text(json.dumps(development, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {report_path}")
+    return development
+
+
 def _class_counts(mode: str, splits: dict[str, list[str]]) -> None:
     """Print Pass and Fail counts. Pass is stored as failure-absent (0)."""
     labels = {str(row["trace_id"]): int(row["label"]) for row in _load_labels(mode)}
@@ -127,5 +194,7 @@ if __name__ == "__main__":
     elif command == "split":
         assignment = split_data()
         _class_counts(MODE, assignment)
+    elif command == "dev":
+        run_development()
     else:
         raise SystemExit(f"unknown command {command}")

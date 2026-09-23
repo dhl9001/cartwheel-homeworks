@@ -30,6 +30,10 @@ _SCALE_MODEL_LITELLM = {
     "gpt-nano": "gpt-5.5-nano",
 }
 
+# Evidence from the most recent live DocETL batch, keyed by trace id.
+# run_judge copies this onto the judge record and then clears it.
+last_evidence: dict[str, str] = {}
+
 
 def load_store_traces() -> list[dict[str, Any]]:
     """Load the full store slice the frozen judge scales over.
@@ -182,6 +186,7 @@ def _run_docetl_map(  # pragma: no cover - requires the docetl extra + a live ke
         PipelineStep,
     )
 
+    last_evidence.clear()
     store = {trace["trace_id"]: trace for trace in load_store_traces()}
     rows = [
         {"trace_id": tid, "content": _trace_text(tid, store)} for tid in trace_ids
@@ -232,6 +237,7 @@ def _run_docetl_map(  # pragma: no cover - requires the docetl extra + a live ke
         # Prediction files store failure flags for each named mode, while the
         # evaluator's public convention defines Pass as positive.
         result[str(tid)] = 0 if bool(row["passes_mode"]) else 1
+        last_evidence[str(tid)] = str(row.get("evidence") or "")
     missing = sorted(set(map(str, trace_ids)) - set(result))
     if missing:
         raise ValueError(f"DocETL returned no result for trace ids: {missing[:5]}")

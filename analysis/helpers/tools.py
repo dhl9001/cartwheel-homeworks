@@ -519,6 +519,15 @@ def run_judge(
             )
         for tid, pred in fresh.items():
             cache[str(tid)] = int(pred)
+        evidence = {
+            tid: text
+            for tid, text in scale.last_evidence.items()
+            if tid in cache
+        }
+        if classify is None and evidence:
+            critiques = judge.setdefault("critiques", {}).setdefault(judge["prompt_hash"], {})
+            critiques.update(evidence)
+        scale.last_evidence.clear()
         _state.write_json(_judge_path(judge_id), judge)
 
     if split == "store":
