@@ -337,6 +337,7 @@ def split_labels(
     fractions: tuple[float, float, float] = (0.15, 0.425, 0.425),
     seed: int = 7,
     min_per_class: int = 10,
+    eligible_trace_ids: list[str] | None = None,
 ) -> dict[str, list[str]]:
     """Split the human judgments for ``mode`` into disjoint train/dev/test.
 
@@ -354,6 +355,8 @@ def split_labels(
         seed: RNG seed for a reproducible shuffle (demo seed is 7).
         min_per_class: minimum examples of each class the smaller eval split
             must be able to hold; below this the split raises.
+        eligible_trace_ids: when set, split only labels whose trace id is in
+            this list. Homework 5 uses the ids in the saved judge inputs.
 
     Returns:
         ``{"train": [...], "dev": [...], "test": [...]}`` of trace ids,
@@ -363,6 +366,9 @@ def split_labels(
     import random
 
     labels = _load_labels(mode)
+    if eligible_trace_ids is not None:
+        allowed = {str(trace_id) for trace_id in eligible_trace_ids}
+        labels = [row for row in labels if str(row["trace_id"]) in allowed]
     if not labels:
         raise ValueError(f"no labels for mode '{mode}'; label some traces first.")
     fails = sorted(r["trace_id"] for r in labels if r["label"] == 1)
@@ -513,6 +519,15 @@ def run_judge(
             )
         for tid, pred in fresh.items():
             cache[str(tid)] = int(pred)
+        evidence = {
+            tid: text
+            for tid, text in scale.last_evidence.items()
+            if tid in cache
+        }
+        if classify is None and evidence:
+            critiques = judge.setdefault("critiques", {}).setdefault(judge["prompt_hash"], {})
+            critiques.update(evidence)
+        scale.last_evidence.clear()
         _state.write_json(_judge_path(judge_id), judge)
 
     if split == "store":

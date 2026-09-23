@@ -30,12 +30,18 @@ _SCALE_MODEL_LITELLM = {
     "gpt-nano": "gpt-5.5-nano",
 }
 
+# Evidence from the most recent live DocETL batch, keyed by trace id.
+# run_judge copies this onto the judge record and then clears it.
+last_evidence: dict[str, str] = {}
+
 
 def load_store_traces() -> list[dict[str, Any]]:
     """Load the full store slice the frozen judge scales over.
 
-    Sources from Langfuse when it is configured (``LANGFUSE_*`` present),
-    pulling the error analysis trace slice via
+    ``CARTWHEEL_JUDGE_TRACE_SOURCE`` wins when it is set, including when
+    Langfuse is configured, so a saved Homework 5 export stays the judge
+    input. Otherwise this sources from Langfuse when it is configured
+    (``LANGFUSE_*`` present), pulling the error analysis trace slice via
     :func:`analysis.helpers.langfuse_io.fetch_traces`; otherwise reads and
     normalizes the committed export at ``state/store_traces.json``. A
     configured Langfuse failure is surfaced rather than replaced with demo
@@ -43,13 +49,22 @@ def load_store_traces() -> list[dict[str, Any]]:
     invalidate the result.
     """
     from . import langfuse_io
+    from .normalization import normalize_traces
+
+    override = os.environ.get("CARTWHEEL_JUDGE_TRACE_SOURCE")
+    if override:
+        payload = json.loads(Path(override).read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and "traces" in payload:
+            payload = payload["traces"]
+        if not isinstance(payload, list):
+            raise ValueError(f"judge trace source must be a JSON list: {override}")
+        return normalize_traces(payload)
 
     if langfuse_io.is_configured():
         traces = langfuse_io.fetch_traces()
         if not traces:
             raise ValueError("Langfuse returned no traces for the Module 2 slice")
         return traces
-    from .normalization import normalize_traces
 
     records = _state.read_json(_state.state_path("store_traces.json"), default=[])
     return normalize_traces(records) if records else []
@@ -171,6 +186,7 @@ def _run_docetl_map(  # pragma: no cover - requires the docetl extra + a live ke
         PipelineStep,
     )
 
+    last_evidence.clear()
     store = {trace["trace_id"]: trace for trace in load_store_traces()}
     rows = [
         {"trace_id": tid, "content": _trace_text(tid, store)} for tid in trace_ids
@@ -221,6 +237,7 @@ def _run_docetl_map(  # pragma: no cover - requires the docetl extra + a live ke
         # Prediction files store failure flags for each named mode, while the
         # evaluator's public convention defines Pass as positive.
         result[str(tid)] = 0 if bool(row["passes_mode"]) else 1
+        last_evidence[str(tid)] = str(row.get("evidence") or "")
     missing = sorted(set(map(str, trace_ids)) - set(result))
     if missing:
         raise ValueError(f"DocETL returned no result for trace ids: {missing[:5]}")

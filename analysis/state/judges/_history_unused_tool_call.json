@@ -1,0 +1,16 @@
+{
+  "versions": [
+    {
+      "judge_id": "unused_tool_call-v0",
+      "prompt_hash": "0e70f847f9a6"
+    },
+    {
+      "judge_id": "unused_tool_call-v1",
+      "prompt_hash": "a044a93b18eb"
+    },
+    {
+      "judge_id": "unused_tool_call-v2",
+      "prompt_hash": "b4a7109c96d9"
+    }
+  ]
+}

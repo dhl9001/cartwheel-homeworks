@@ -162,11 +162,15 @@ def _flatten(messages: list[dict[str, Any]]) -> str:
     parts: list[str] = []
     for message in messages:
         role = str(message.get("role") or "step")
+        name = str(message.get("name") or "").strip()
         if role == "tool_call":
             content = _text(message.get("arguments"))
         else:
             content = _text(message.get("text", message.get("content")))
-        if content:
+        if role in {"tool_call", "tool_result"} and name:
+            line = f"{role} {name}: {content}" if content else f"{role} {name}"
+            parts.append(line)
+        elif content:
             parts.append(f"{role}: {content}")
     return "\n".join(parts)
 
