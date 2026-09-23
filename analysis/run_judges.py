@@ -1,0 +1,131 @@
+"""Prepare Homework 5 judge inputs and split human labels.
+
+The judge sees the conversation and the tool activity. It does not see
+review notes, failure labels, or scenario metadata.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from analysis.helpers.tools import _load_labels, split_labels
+from analysis.review_app.sessions import build_sessions
+
+ROOT = Path(__file__).resolve().parents[1]
+EXPORT_PATH = ROOT / "traces" / "support_traces.json"
+INPUTS_PATH = ROOT / "analysis" / "state" / "hw5_trace_inputs.json"
+MODE = "unused_tool_call"
+
+
+def _turn_messages(turn: dict) -> list[dict]:
+    """User request, chronological tool calls and results, then the reply."""
+    messages: list[dict] = []
+    if turn.get("user_text"):
+        messages.append({"role": "user", "text": turn["user_text"]})
+    for tool in turn.get("tools") or []:
+        messages.append(
+            {
+                "role": "tool_call",
+                "name": tool.get("name"),
+                "arguments": tool.get("arguments"),
+            }
+        )
+        messages.append(
+            {
+                "role": "tool_result",
+                "name": tool.get("name"),
+                "content": tool.get("result"),
+            }
+        )
+    if turn.get("assistant_text"):
+        messages.append({"role": "assistant", "text": turn["assistant_text"]})
+    return messages
+
+
+def prepare_inputs(mode: str = MODE) -> list[dict]:
+    """Save one judge record for every live label of ``mode``.
+
+    A record includes earlier turns in the same session, then the labeled
+    turn. Later turns are omitted. The saved file is the input for every
+    prompt version.
+    """
+    labels = _load_labels(mode)
+    if not labels:
+        raise ValueError(f"no labels for mode '{mode}'")
+    export = json.loads(EXPORT_PATH.read_text(encoding="utf-8"))
+    sessions = build_sessions(export)
+    located: dict[str, tuple[dict, int]] = {}
+    for session in sessions:
+        for index, turn in enumerate(session["turns"]):
+            located[turn["trace_id"]] = (session, index)
+
+    records: list[dict] = []
+    missing: list[str] = []
+    multi_turn = 0
+    for row in sorted(labels, key=lambda item: item["trace_id"]):
+        trace_id = str(row["trace_id"])
+        found = located.get(trace_id)
+        if found is None:
+            missing.append(trace_id)
+            continue
+        session, index = found
+        if index:
+            multi_turn += 1
+        messages: list[dict] = []
+        for turn in session["turns"][: index + 1]:
+            messages.extend(_turn_messages(turn))
+        records.append({"trace_id": trace_id, "trace": messages})
+
+    if missing:
+        raise ValueError(f"{len(missing)} labeled traces are missing from the export")
+    if len(records) != len({record["trace_id"] for record in records}):
+        raise ValueError("judge inputs contain duplicate trace ids")
+
+    INPUTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    INPUTS_PATH.write_text(json.dumps(records, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"wrote {len(records)} inputs to {INPUTS_PATH}")
+    print(f"records that include an earlier turn: {multi_turn}")
+    return records
+
+
+def split_data(mode: str = MODE) -> dict[str, list[str]]:
+    """Split labels 20/40/40 once, using only traces present in the judge inputs."""
+    records = json.loads(INPUTS_PATH.read_text(encoding="utf-8"))
+    eligible = [record["trace_id"] for record in records]
+    labeled = {str(row["trace_id"]) for row in _load_labels(mode)}
+    missing = sorted(labeled - set(eligible))
+    if missing:
+        raise ValueError(f"{len(missing)} labels have no judge input")
+    splits = split_labels(
+        mode,
+        fractions=(0.20, 0.40, 0.40),
+        seed=7,
+        min_per_class=10,
+        eligible_trace_ids=eligible,
+    )
+    return splits
+
+
+def _class_counts(mode: str, splits: dict[str, list[str]]) -> None:
+    """Print Pass and Fail counts. Pass is stored as failure-absent (0)."""
+    labels = {str(row["trace_id"]): int(row["label"]) for row in _load_labels(mode)}
+    print(f"{'split':<8} {'Pass':>6} {'Fail':>6} {'total':>6}")
+    for name in ("train", "dev", "test"):
+        ids = splits[name]
+        fail = sum(1 for trace_id in ids if labels[trace_id] == 1)
+        passed = sum(1 for trace_id in ids if labels[trace_id] == 0)
+        print(f"{name:<8} {passed:6} {fail:6} {len(ids):6}")
+
+
+if __name__ == "__main__":
+    import sys
+
+    command = sys.argv[1] if len(sys.argv) > 1 else "prepare"
+    if command == "prepare":
+        prepare_inputs()
+    elif command == "split":
+        assignment = split_data()
+        _class_counts(MODE, assignment)
+    else:
+        raise SystemExit(f"unknown command {command}")

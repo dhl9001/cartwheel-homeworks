@@ -98,3 +98,9 @@
 {"trace_id": "6d57af168adc41e7071a61c301b953f4", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:03.061212+00:00", "label_id": "6d57af168adc41e7071a61c301b953f4#0"}
 {"trace_id": "49efeff9f4f63aa087e482812624e9f6", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:03.073505+00:00", "label_id": "49efeff9f4f63aa087e482812624e9f6#0"}
 {"trace_id": "ec2cb5e4decc3d2ae19c800537fbe5f5", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:03.090801+00:00", "label_id": "ec2cb5e4decc3d2ae19c800537fbe5f5#0"}
+{"trace_id": "b36a32784da944820f0294d47e80ca8c", "mode": "unused_tool_call", "label": 1, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "b36a32784da944820f0294d47e80ca8c#0"}
+{"trace_id": "ce4583e3b8faedc247225002849c33c1", "mode": "unused_tool_call", "label": 1, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "ce4583e3b8faedc247225002849c33c1#0"}
+{"trace_id": "557906bd816d78dc46bed622ec63e532", "mode": "unused_tool_call", "label": 1, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "557906bd816d78dc46bed622ec63e532#0"}
+{"trace_id": "611f3372d559f8b0616bb68cead9dd9d", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "611f3372d559f8b0616bb68cead9dd9d#0"}
+{"trace_id": "a24e529add74455c9bc4e68ca6228707", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "a24e529add74455c9bc4e68ca6228707#0"}
+{"trace_id": "f6c9057bf7034b7289c57f2e9500dc61", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "f6c9057bf7034b7289c57f2e9500dc61#0"}

@@ -34,8 +34,10 @@ _SCALE_MODEL_LITELLM = {
 def load_store_traces() -> list[dict[str, Any]]:
     """Load the full store slice the frozen judge scales over.
 
-    Sources from Langfuse when it is configured (``LANGFUSE_*`` present),
-    pulling the error analysis trace slice via
+    ``CARTWHEEL_JUDGE_TRACE_SOURCE`` wins when it is set, including when
+    Langfuse is configured, so a saved Homework 5 export stays the judge
+    input. Otherwise this sources from Langfuse when it is configured
+    (``LANGFUSE_*`` present), pulling the error analysis trace slice via
     :func:`analysis.helpers.langfuse_io.fetch_traces`; otherwise reads and
     normalizes the committed export at ``state/store_traces.json``. A
     configured Langfuse failure is surfaced rather than replaced with demo
@@ -43,13 +45,22 @@ def load_store_traces() -> list[dict[str, Any]]:
     invalidate the result.
     """
     from . import langfuse_io
+    from .normalization import normalize_traces
+
+    override = os.environ.get("CARTWHEEL_JUDGE_TRACE_SOURCE")
+    if override:
+        payload = json.loads(Path(override).read_text(encoding="utf-8"))
+        if isinstance(payload, dict) and "traces" in payload:
+            payload = payload["traces"]
+        if not isinstance(payload, list):
+            raise ValueError(f"judge trace source must be a JSON list: {override}")
+        return normalize_traces(payload)
 
     if langfuse_io.is_configured():
         traces = langfuse_io.fetch_traces()
         if not traces:
             raise ValueError("Langfuse returned no traces for the Module 2 slice")
         return traces
-    from .normalization import normalize_traces
 
     records = _state.read_json(_state.state_path("store_traces.json"), default=[])
     return normalize_traces(records) if records else []
