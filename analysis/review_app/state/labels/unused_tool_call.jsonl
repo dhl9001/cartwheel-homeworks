@@ -73,7 +73,7 @@
 {"trace_id": "a0ef97d283c8de8bedebc5c9cacafbae", "mode": "unused_tool_call", "label": 1, "source": "human", "ts": "2026-09-22T17:05:02.662130+00:00", "label_id": "a0ef97d283c8de8bedebc5c9cacafbae#0"}
 {"trace_id": "69b88c7e2e89ea500e719a91fb48b2e4", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:02.677595+00:00", "label_id": "69b88c7e2e89ea500e719a91fb48b2e4#0"}
 {"trace_id": "70a555857738eb20382c25bb495c04db", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:02.691457+00:00", "label_id": "70a555857738eb20382c25bb495c04db#0"}
-{"trace_id": "8af5a536473c3b02e311ed09e3409760", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:02.708330+00:00", "label_id": "8af5a536473c3b02e311ed09e3409760#0"}
+{"trace_id": "8af5a536473c3b02e311ed09e3409760", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:02.708330+00:00", "label_id": "8af5a536473c3b02e311ed09e3409760#0", "superseded_by": "8af5a536473c3b02e311ed09e3409760#1"}
 {"trace_id": "ef7942dc762a4cac3ec0a0e6297f408f", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:02.724741+00:00", "label_id": "ef7942dc762a4cac3ec0a0e6297f408f#0"}
 {"trace_id": "1d1c38f586a39e71d31bca9e49d82bea", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-22T17:05:02.740598+00:00", "label_id": "1d1c38f586a39e71d31bca9e49d82bea#0"}
 {"trace_id": "d88a78733e6ccf1a5e5582be045dd9f7", "mode": "unused_tool_call", "label": 1, "source": "human", "ts": "2026-09-22T17:05:02.751477+00:00", "label_id": "d88a78733e6ccf1a5e5582be045dd9f7#0"}
@@ -104,3 +104,4 @@
 {"trace_id": "611f3372d559f8b0616bb68cead9dd9d", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "611f3372d559f8b0616bb68cead9dd9d#0"}
 {"trace_id": "a24e529add74455c9bc4e68ca6228707", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "a24e529add74455c9bc4e68ca6228707#0"}
 {"trace_id": "f6c9057bf7034b7289c57f2e9500dc61", "mode": "unused_tool_call", "label": 0, "source": "human", "ts": "2026-09-23T08:57:36.094979+00:00", "label_id": "f6c9057bf7034b7289c57f2e9500dc61#0"}
+{"trace_id": "8af5a536473c3b02e311ed09e3409760", "mode": "unused_tool_call", "label": 1, "source": "human", "ts": "2026-09-23T10:56:53.795480+00:00", "label_id": "8af5a536473c3b02e311ed09e3409760#1"}

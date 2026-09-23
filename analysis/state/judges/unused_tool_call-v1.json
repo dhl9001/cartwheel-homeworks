@@ -23,6 +23,14 @@
       "dev_tnr": 1.0,
       "label_flips": 0,
       "ts": "2026-09-23T09:59:50.431289+00:00"
+    },
+    {
+      "version": 1,
+      "change_note": "Flipped full-089, the refund-timing turn, from Pass to Fail.",
+      "dev_tpr": 0.2069,
+      "dev_tnr": 1.0,
+      "label_flips": 1,
+      "ts": "2026-09-23T10:56:54.175302+00:00"
     }
   ],
   "predictions": {
