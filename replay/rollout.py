@@ -368,6 +368,44 @@ def retrieved_docs_text(transcript: dict[str, Any]) -> str:
     return "\n\n".join(chunks) if chunks else "(no policy documents were retrieved)"
 
 
+def judge_trace_text(transcript: dict[str, Any]) -> str:
+    """Format a runtime transcript like the Homework 5 judge input.
+
+    Tool lines keep the tool name, matching
+    ``analysis.helpers.normalization._flatten``. The frozen unused-tool
+    judge reads the name on each ``tool_call`` line.
+    """
+    lines: list[str] = []
+    for turn in transcript.get("turns", []):
+        user = turn.get("user") or ""
+        if user:
+            lines.append(f"user: {user}")
+        for call in turn.get("tool_calls", []):
+            name = str(call.get("name") or "").strip()
+            arguments = json.dumps(
+                call.get("args"), ensure_ascii=False, sort_keys=True, default=str
+            )
+            result = json.dumps(
+                call.get("result"), ensure_ascii=False, sort_keys=True, default=str
+            )
+            if name:
+                lines.append(
+                    f"tool_call {name}: {arguments}" if arguments else f"tool_call {name}"
+                )
+                lines.append(
+                    f"tool_result {name}: {result}" if result else f"tool_result {name}"
+                )
+            else:
+                if arguments:
+                    lines.append(f"tool_call: {arguments}")
+                if result:
+                    lines.append(f"tool_result: {result}")
+        reply = turn.get("reply") or ""
+        if reply:
+            lines.append(f"assistant: {reply}")
+    return "\n".join(lines)
+
+
 def judge_reply(judge: dict[str, Any], reply: str, docs: str) -> str:
     """Run one frozen judge on a reply. Returns "pass" or "fail".
 
