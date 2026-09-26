@@ -13,6 +13,7 @@ name: evals
 on:
   push:
   pull_request:
+  workflow_dispatch:
   schedule:
     - cron: "17 9 * * *" # nightly, catches provider-side drift between PRs
 
