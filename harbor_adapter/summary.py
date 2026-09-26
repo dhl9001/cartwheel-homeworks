@@ -49,7 +49,17 @@ def summarize_job(
     result = json.loads(result_path.read_text())
     trials: dict[str, list[dict[str, Any]]] = defaultdict(list)
     unknown: list[str] = []
-    for trial in result.get("trial_results", []):
+    embedded = result.get("trial_results")
+    if embedded:
+        trial_results = embedded
+    else:
+        # Harbor 0.23 writes the aggregate result without trial_results and
+        # stores one result.json in each trial directory.
+        trial_results = [
+            json.loads(path.read_text())
+            for path in sorted(job_dir.glob("*/result.json"))
+        ]
+    for trial in trial_results:
         case_id = _case_id(str(trial.get("task_name", "")), set(by_id))
         if case_id is None:
             unknown.append(str(trial.get("task_name", "")))

@@ -230,6 +230,44 @@ def test_baseline_summary_reports_the_observed_classification(tmp_path: Path) ->
     assert '`kind: "capability"`, `baseline_pass_rate: 0.6`' in markdown
 
 
+def test_baseline_summary_reads_per_trial_result_files(tmp_path: Path) -> None:
+    cases_path = tmp_path / "cases.jsonl"
+    case = {
+        "id": "e-304",
+        "mode": "response_quality",
+        "input": {"role": "shopper", "user_id": 1, "message": "hello"},
+        "initial_state": {"world": "reseed", "fixture": None},
+        "expected": {"checks": [{"check": "reply_asks_question"}]},
+    }
+    _write_cases(cases_path, [case])
+    job = tmp_path / "job"
+    job.mkdir()
+    (job / "result.json").write_text(json.dumps({"trial_results": []}))
+    for attempt, reward in enumerate([1, 1, 1, 1, 1]):
+        trial = job / f"e-304__try{attempt}"
+        trial.mkdir()
+        (trial / "result.json").write_text(
+            json.dumps(
+                {
+                    "task_name": "cartwheel/evals__e-304",
+                    "trial_name": f"e-304__try{attempt}",
+                    "verifier_result": {"rewards": {"reward": reward}},
+                    "exception_info": None,
+                }
+            )
+        )
+
+    markdown, passed = summarize_job(
+        job,
+        cases_path=cases_path,
+        expected_attempts=5,
+        classify=True,
+    )
+
+    assert passed is True
+    assert '`kind: "regression"`' in markdown
+
+
 def test_baseline_summary_does_not_classify_infrastructure_errors(
     tmp_path: Path,
 ) -> None:
