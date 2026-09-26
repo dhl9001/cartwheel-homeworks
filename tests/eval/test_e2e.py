@@ -26,11 +26,11 @@ from pathlib import Path
 
 import pytest
 
+from harbor_adapter.export import load_export_cases
 from replay.rollout import (
     apply_checks,
     fresh_world,
     judge_reply,
-    load_cases,
     load_frozen_judge,
     retrieved_docs_text,
     run_case,
@@ -51,7 +51,11 @@ pytestmark = pytest.mark.skipif(
 # silently pass a judge-guarded case as green-by-default.
 JUDGE_KEY_PRESENT = bool(os.environ.get("ANTHROPIC_API_KEY"))
 
-CASES = load_cases()
+CASES = [
+    case
+    for case in load_export_cases()
+    if case.get("kind") in {"regression", "capability"}
+]
 
 
 def _run_once(case: dict, root: Path) -> tuple[bool, list[str], dict]:
@@ -73,8 +77,14 @@ def _run_once(case: dict, root: Path) -> tuple[bool, list[str], dict]:
     return (not failures, failures, transcript["usage"])
 
 
-@pytest.mark.parametrize("case", CASES, ids=[c["id"] for c in CASES])
-def test_e2e_case(case: dict, tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "case",
+    CASES or [None],
+    ids=[case["id"] for case in CASES] or ["pending"],
+)
+def test_e2e_case(case: dict | None, tmp_path: Path) -> None:
+    if case is None:
+        pytest.skip("no classified evaluation cases yet")
     from tests.eval.passk import case_passes
 
     passes = 0

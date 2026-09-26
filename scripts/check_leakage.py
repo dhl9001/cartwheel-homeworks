@@ -63,8 +63,23 @@ def find_leaks(
     Returns:
         A list of leak records, empty when the suite is clean.
     """
-    ### YOUR CODE HERE (hw6)
-    raise NotImplementedError("hw6: implement find_leaks")
+    leaks: list[dict[str, Any]] = []
+    for case_id, evaluation_input in evaluation_inputs.items():
+        normalized_input = _normalize(evaluation_input)
+        if len(normalized_input) < min_chars:
+            continue
+        excerpt = normalized_input[:60]
+        for prompt_name, prompt_text in prompt_texts.items():
+            if normalized_input in _normalize(prompt_text):
+                leaks.append(
+                    {
+                        "case_id": case_id,
+                        "prompt": prompt_name,
+                        "excerpt": excerpt,
+                    }
+                )
+    leaks.sort(key=lambda leak: (leak["case_id"], leak["prompt"]))
+    return leaks
 
 
 # ---------------------------------------------------------------------------

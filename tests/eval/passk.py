@@ -57,8 +57,12 @@ def pass_at_k(n: int, c: int, k: int) -> float:
         pass_at_k(8, 6, 4) == 1.0  (only 2 failures, so every 4-subset hits
                                     a success)
     """
-    ### YOUR CODE HERE (hw6)
-    raise NotImplementedError("hw6: implement pass_at_k")
+    if n < 1 or c < 0 or c > n or k < 1 or k > n:
+        raise ValueError(f"pass_at_k requires n >= 1, 0 <= c <= n, and 1 <= k <= n; got n={n}, c={c}, k={k}")
+    failures = n - c
+    if failures < k:
+        return 1.0
+    return 1.0 - comb(failures, k) / comb(n, k)
 
 
 def pass_hat_k(n: int, c: int, k: int) -> float:
@@ -89,8 +93,11 @@ def pass_hat_k(n: int, c: int, k: int) -> float:
         pass_hat_k(8, 6, 4) == C(6,4)/C(8,4) == 15/70 == 0.2142857...
         pass_hat_k(8, 6, 8) == 0.0  (not all 8 succeeded)
     """
-    ### YOUR CODE HERE (hw6)
-    raise NotImplementedError("hw6: implement pass_hat_k")
+    if n < 1 or c < 0 or c > n or k < 1 or k > n:
+        raise ValueError(f"pass_hat_k requires n >= 1, 0 <= c <= n, and 1 <= k <= n; got n={n}, c={c}, k={k}")
+    if c < k:
+        return 0.0
+    return comb(c, k) / comb(n, k)
 
 
 def case_passes(
@@ -139,5 +146,23 @@ def case_passes(
         case_passes("capability", 2, 5, 0.6)     -> pass  (never blocks)
         case_passes("capability", 1, 5, 0.6)     -> pass  (never blocks)
     """
-    ### YOUR CODE HERE (hw6)
-    raise NotImplementedError("hw6: implement case_passes")
+    if kind not in {"regression", "capability"}:
+        raise ValueError(f"kind must be regression or capability, got {kind!r}")
+    if k < 1 or passes < 0 or passes > k:
+        raise ValueError(f"passes must be in [0, k] with k >= 1; got passes={passes}, k={k}")
+    if kind == "regression":
+        if passes < k:
+            failed = k - passes
+            return {
+                "decision": "block",
+                "reason": f"regression case failed {failed} of {k} runs",
+            }
+        return {
+            "decision": "pass",
+            "reason": f"regression case passed {passes} of {k} runs",
+        }
+    baseline = "" if baseline_pass_rate is None else f", baseline {baseline_pass_rate}"
+    return {
+        "decision": "pass",
+        "reason": f"capability case passed {passes} of {k}{baseline}, not blocking",
+    }
